@@ -470,6 +470,58 @@ func (sm *ScalingManager) GetIntelligentScalingOptions(monitor Monitor) []Scalin
 			},
 		}
 
+	case pixelCount >= 5000000: // High-DPI displays like Framework 13 (2880x1920), MacBook Pro 13", etc.
+		options = []ScalingOption{
+			{
+				MonitorScale:    2.0,
+				GTKScale:        2,
+				FontDPI:         192, // 96 * 2
+				FontScale:       1.0,
+				DisplayName:     "2x Recommended",
+				Description:     "Perfect for high-DPI laptop displays",
+				Reasoning:       "Ideal for 13-14\" laptops with 3K displays like Framework 13. Crisp and comfortable.",
+				IsRecommended:   true,
+				EffectiveWidth:  baseWidth / 2,
+				EffectiveHeight: baseHeight / 2,
+			},
+			{
+				MonitorScale:    1.75,
+				GTKScale:        2,
+				FontDPI:         168, // 96 * 1.75
+				FontScale:       1.0,
+				DisplayName:     "1.75x More Space",
+				Description:     "More screen space while staying readable",
+				Reasoning:       "Good balance for productivity work on high-DPI displays.",
+				IsRecommended:   false,
+				EffectiveWidth:  int(float64(baseWidth) / 1.75),
+				EffectiveHeight: int(float64(baseHeight) / 1.75),
+			},
+			{
+				MonitorScale:    1.5,
+				GTKScale:        1,
+				FontDPI:         144, // 96 * 1.5
+				FontScale:       1.5,
+				DisplayName:     "1.5x Maximum Space",
+				Description:     "Maximum usable space",
+				Reasoning:       "For users who want the most screen real estate possible.",
+				IsRecommended:   false,
+				EffectiveWidth:  int(float64(baseWidth) / 1.5),
+				EffectiveHeight: int(float64(baseHeight) / 1.5),
+			},
+			{
+				MonitorScale:    1.0,
+				GTKScale:        1,
+				FontDPI:         96,
+				FontScale:       1.0,
+				DisplayName:     "1x Native (Tiny)",
+				Description:     "No scaling - everything will be extremely small",
+				Reasoning:       "Not recommended for laptop displays. Text will be barely readable.",
+				IsRecommended:   false,
+				EffectiveWidth:  baseWidth,
+				EffectiveHeight: baseHeight,
+			},
+		}
+
 	case pixelCount >= 3686400: // 1440p (2560x1440)
 		options = []ScalingOption{
 			{

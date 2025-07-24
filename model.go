@@ -1132,38 +1132,39 @@ func (m Model) renderSettings(contentHeight int) string {
 	title := lipgloss.NewStyle().
 		Foreground(tokyoPurple).
 		Bold(true).
-		Render("Application Settings")
+		Render("⚙️ Application Settings")
 
 	content = append(content, title)
 	content = append(content, "")
 
-	// Application info section
-	appSection := lipgloss.NewStyle().
-		Background(tokyoSurface).
-		Padding(1, 2).
-		Border(lipgloss.RoundedBorder()).
-		BorderForeground(tokyoBlue).
-		Render(fmt.Sprintf("%s\n%s\n%s\n%s",
-			lipgloss.NewStyle().Foreground(tokyoBlue).Bold(true).Render("📱 Application Info"),
-			fmt.Sprintf("Version: %s", lipgloss.NewStyle().Foreground(tokyoGreen).Render("0.1.0")),
-			fmt.Sprintf("Theme: %s", lipgloss.NewStyle().Foreground(tokyoPurple).Render("Tokyo Night")),
-			fmt.Sprintf("Mode: %s", func() string {
-				if m.isDemoMode {
-					return lipgloss.NewStyle().Foreground(tokyoOrange).Render("Demo")
-				}
-				return lipgloss.NewStyle().Foreground(tokyoGreen).Render("Live")
-			}()),
-		))
-
-	content = append(content, appSection)
+	// Application info section - clean and consistent
+	appTitle := lipgloss.NewStyle().Foreground(tokyoBlue).Bold(true).Render("📱 Application Info")
+	content = append(content, appTitle)
 	content = append(content, "")
 
-	// Detection methods section
+	appItems := []string{
+		fmt.Sprintf("  Version: %s", lipgloss.NewStyle().Foreground(tokyoGreen).Render("0.1.0")),
+		fmt.Sprintf("  Theme: %s", lipgloss.NewStyle().Foreground(tokyoPurple).Render("Tokyo Night")),
+		fmt.Sprintf("  Mode: %s", func() string {
+			if m.isDemoMode {
+				return lipgloss.NewStyle().Foreground(tokyoOrange).Render("Demo")
+			}
+			return lipgloss.NewStyle().Foreground(tokyoGreen).Render("Live")
+		}()),
+	}
+
+	for _, item := range appItems {
+		content = append(content, lipgloss.NewStyle().Foreground(tokyoSubtle).Render(item))
+	}
+
+	content = append(content, "")
+
+	// Detection methods section - clean and consistent
+	detectionTitle := lipgloss.NewStyle().Foreground(tokyoCyan).Bold(true).Render("🔍 Detection Methods")
+	content = append(content, detectionTitle)
+	content = append(content, "")
+
 	detector := NewMonitorDetector()
-	var detectionItems []string
-
-	detectionItems = append(detectionItems, lipgloss.NewStyle().Foreground(tokyoCyan).Bold(true).Render("🔍 Detection Methods"))
-
 	methods := []struct {
 		name string
 		cmd  string
@@ -1180,37 +1181,37 @@ func (m Model) renderSettings(contentHeight int) string {
 		} else {
 			status = lipgloss.NewStyle().Foreground(tokyoRed).Render("✗ Not found")
 		}
-		detectionItems = append(detectionItems, fmt.Sprintf("%s: %s", method.name, status))
+		item := fmt.Sprintf("  %s: %s", method.name, status)
+		content = append(content, lipgloss.NewStyle().Foreground(tokyoSubtle).Render(item))
 	}
 
-	detectionSection := lipgloss.NewStyle().
-		Background(tokyoSurface).
-		Padding(1, 2).
-		Border(lipgloss.RoundedBorder()).
-		BorderForeground(tokyoCyan).
-		Render(strings.Join(detectionItems, "\n"))
-
-	content = append(content, detectionSection)
 	content = append(content, "")
 
-	// Configuration section
+	// Configuration section - clean and consistent (FIXED)
+	configTitle := lipgloss.NewStyle().Foreground(tokyoYellow).Bold(true).Render("⚙️ Configuration")
+	content = append(content, configTitle)
+	content = append(content, "")
+
 	configItems := []string{
-		lipgloss.NewStyle().Foreground(tokyoYellow).Bold(true).Render("⚙️ Configuration"),
-		fmt.Sprintf("Target: %s", lipgloss.NewStyle().Foreground(tokyoGreen).Render("Hyprland + Wayland")),
-		fmt.Sprintf("Fallbacks: %s", lipgloss.NewStyle().Foreground(tokyoBlue).Render("wlr-randr, xrandr")),
-		fmt.Sprintf("Font Scaling: %s", lipgloss.NewStyle().Foreground(tokyoPurple).Render("GTK, Alacritty, Neovim")),
+		fmt.Sprintf("  Target: %s", lipgloss.NewStyle().Foreground(tokyoGreen).Render("Hyprland + Wayland")),
+		fmt.Sprintf("  Fallbacks: %s", lipgloss.NewStyle().Foreground(tokyoBlue).Render("wlr-randr, xrandr")),
+		fmt.Sprintf("  Font Scaling: %s", lipgloss.NewStyle().Foreground(tokyoPurple).Render("GTK, Alacritty, Neovim")),
 	}
 
-	configSection := lipgloss.NewStyle().
-		Background(tokyoSurface).
-		Padding(1, 2).
-		Border(lipgloss.RoundedBorder()).
-		BorderForeground(tokyoYellow).
-		Render(strings.Join(configItems, "\n"))
+	for _, item := range configItems {
+		content = append(content, lipgloss.NewStyle().Foreground(tokyoSubtle).Render(item))
+	}
 
-	content = append(content, configSection)
+	content = append(content, "")
 
-	// Beautiful container
+	// Footer message
+	footer := lipgloss.NewStyle().
+		Foreground(tokyoComment).
+		Italic(true).
+		Render("💡 Press Esc to return to the main menu")
+	content = append(content, footer)
+
+	// Simple, clean container - consistent with other screens
 	return lipgloss.NewStyle().
 		Width(m.width - 8).
 		Height(contentHeight - 2).
