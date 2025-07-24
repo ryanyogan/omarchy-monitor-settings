@@ -12,6 +12,7 @@ import (
 var (
 	noHyprlandCheck bool
 	debugMode       bool
+	forceLiveMode   bool
 	version         = "0.1.0"
 )
 
@@ -30,6 +31,7 @@ func main() {
 
 	rootCmd.Flags().BoolVar(&noHyprlandCheck, "no-hyprland-check", false, "Skip Hyprland environment check (useful for testing)")
 	rootCmd.Flags().BoolVar(&debugMode, "debug", false, "Enable debug mode")
+	rootCmd.Flags().BoolVar(&forceLiveMode, "force-live", false, "Force live mode (bypass all checks for testing)")
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)

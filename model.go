@@ -180,6 +180,12 @@ func (m *Model) loadMonitors() {
 		m.isDemoMode = true
 		monitors, _ = detector.getFallbackMonitors()
 	}
+
+	// Override demo mode if force-live flag is set
+	if forceLiveMode {
+		m.isDemoMode = false
+	}
+
 	m.monitors = monitors
 }
 
