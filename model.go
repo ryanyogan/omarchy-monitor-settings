@@ -267,7 +267,7 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			if m.selectedMonitor > 0 {
 				m.selectedMonitor--
 				// Update scaling options when monitor changes
-				if len(m.monitors) > 0 {
+				if len(m.monitors) > 0 && m.selectedMonitor < len(m.monitors) {
 					scalingManager := NewScalingManager()
 					m.scalingOptions = scalingManager.GetIntelligentScalingOptions(m.monitors[m.selectedMonitor])
 					m.selectedScalingOpt = 0 // Reset to first option
@@ -288,7 +288,7 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			if m.selectedMonitor < len(m.monitors)-1 {
 				m.selectedMonitor++
 				// Update scaling options when monitor changes
-				if len(m.monitors) > 0 {
+				if len(m.monitors) > 0 && m.selectedMonitor < len(m.monitors) {
 					scalingManager := NewScalingManager()
 					m.scalingOptions = scalingManager.GetIntelligentScalingOptions(m.monitors[m.selectedMonitor])
 					m.selectedScalingOpt = 0 // Reset to first option
@@ -301,14 +301,14 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 
 	case "enter", " ":
-		if m.mode == ModeScalingOptions && len(m.scalingOptions) > 0 {
+		if m.mode == ModeScalingOptions && len(m.scalingOptions) > 0 && m.selectedScalingOpt < len(m.scalingOptions) {
 			// Apply the selected scaling option
 			selectedOption := m.scalingOptions[m.selectedScalingOpt]
-			monitor := m.monitors[m.selectedMonitor]
-
-			configManager := NewConfigManager(m.isDemoMode)
-			configManager.ApplyCompleteScalingOption(monitor, selectedOption)
-
+			if len(m.monitors) > 0 && m.selectedMonitor < len(m.monitors) {
+				monitor := m.monitors[m.selectedMonitor]
+				configManager := NewConfigManager(m.isDemoMode)
+				configManager.ApplyCompleteScalingOption(monitor, selectedOption)
+			}
 			return m, nil
 		}
 		return m.handleSelection()
@@ -753,160 +753,112 @@ func (m Model) renderScalingOptions(contentHeight int) string {
 	content = append(content, title)
 	content = append(content, "")
 
-	if len(m.monitors) > 0 {
+	if len(m.monitors) > 0 && m.selectedMonitor < len(m.monitors) {
 		selectedMonitor := m.monitors[m.selectedMonitor]
 
-		// Monitor info card with better formatting
-		monitorHeader := fmt.Sprintf("%s • %s %s",
-			lipgloss.NewStyle().Foreground(tokyoYellow).Bold(true).Render(selectedMonitor.Name),
-			lipgloss.NewStyle().Foreground(tokyoSubtle).Render(selectedMonitor.Make),
-			lipgloss.NewStyle().Foreground(tokyoSubtle).Render(selectedMonitor.Model))
-
-		monitorSpecs := fmt.Sprintf("%dx%d @ %.0fHz",
+		// Monitor info card - simplified
+		monitorInfo := fmt.Sprintf("%s %s %s - %dx%d@%.0fHz",
+			selectedMonitor.Name, selectedMonitor.Make, selectedMonitor.Model,
 			selectedMonitor.Width, selectedMonitor.Height, selectedMonitor.RefreshRate)
 
 		monitorCard := lipgloss.NewStyle().
 			Background(tokyoSurface).
+			Foreground(tokyoForeground).
 			Padding(1, 2).
 			Border(lipgloss.RoundedBorder()).
 			BorderForeground(tokyoYellow).
-			Render(fmt.Sprintf("%s\n%s", monitorHeader,
-				lipgloss.NewStyle().Foreground(tokyoComment).Render(monitorSpecs)))
+			Render(monitorInfo)
 
 		content = append(content, monitorCard)
 		content = append(content, "")
 
-		// Smart recommendations section
-		recTitle := lipgloss.NewStyle().Foreground(tokyoCyan).Bold(true).Render("🎯 Research-Based Options")
+		// Smart recommendations - simplified layout
+		recTitle := lipgloss.NewStyle().Foreground(tokyoCyan).Bold(true).Render("🎯 Available Options")
 		content = append(content, recTitle)
 		content = append(content, "")
 
-		// Display scaling options
-		optionColors := []lipgloss.Color{tokyoGreen, tokyoBlue, tokyoYellow, tokyoOrange}
-
+		// Display scaling options in a simpler format
 		for i, option := range m.scalingOptions {
-			if i >= len(optionColors) {
-				break // Prevent overflow
+			var line string
+
+			// Selection indicator and recommended badge
+			if i == m.selectedScalingOpt {
+				line = lipgloss.NewStyle().Foreground(tokyoBlue).Bold(true).Render("▶ ")
+			} else {
+				line = "  "
 			}
 
-			color := optionColors[i%len(optionColors)]
-
-			// Build option display
-			var optionLines []string
-
-			// Header with recommended badge
-			headerText := option.DisplayName
+			// Option name with recommended badge
+			optionName := option.DisplayName
 			if option.IsRecommended {
-				headerText += " " + lipgloss.NewStyle().
-					Background(tokyoGreen).
-					Foreground(tokyoBackground).
-					Bold(true).
-					Padding(0, 1).
-					Render("RECOMMENDED")
+				optionName += " [RECOMMENDED]"
 			}
 
 			if i == m.selectedScalingOpt {
-				headerText = lipgloss.NewStyle().
-					Foreground(color).
-					Bold(true).
-					Render("▶ " + headerText)
+				line += lipgloss.NewStyle().Foreground(tokyoBlue).Bold(true).Render(optionName)
 			} else {
-				headerText = lipgloss.NewStyle().
-					Foreground(color).
-					Bold(true).
-					Render("  " + headerText)
+				line += lipgloss.NewStyle().Foreground(tokyoForeground).Render(optionName)
 			}
 
-			optionLines = append(optionLines, headerText)
+			content = append(content, line)
 
-			// Description with wrapping
-			description := lipgloss.NewStyle().
-				Foreground(tokyoSubtle).
-				Width(m.width - 20). // Allow for wrapping
-				Render("  " + option.Description)
-			optionLines = append(optionLines, description)
+			// Description
+			description := fmt.Sprintf("    %s", option.Description)
+			content = append(content, lipgloss.NewStyle().Foreground(tokyoSubtle).Render(description))
 
 			// Technical details
-			details := fmt.Sprintf("  Monitor: %.1fx • GTK: %dx • Font DPI: %d • Result: %dx%d",
+			details := fmt.Sprintf("    Monitor: %.1fx • GTK: %dx • Font DPI: %d • Result: %dx%d",
 				option.MonitorScale, option.GTKScale, option.FontDPI,
 				option.EffectiveWidth, option.EffectiveHeight)
+			content = append(content, lipgloss.NewStyle().Foreground(tokyoComment).Render(details))
 
-			detailsStyled := lipgloss.NewStyle().
-				Foreground(tokyoComment).
-				Width(m.width - 20).
-				Render(details)
-			optionLines = append(optionLines, detailsStyled)
+			// Reasoning
+			reasoning := fmt.Sprintf("    💡 %s", option.Reasoning)
+			content = append(content, lipgloss.NewStyle().Foreground(tokyoDark5).Italic(true).Render(reasoning))
 
-			// Reasoning with wrapping
-			reasoning := lipgloss.NewStyle().
-				Foreground(tokyoDark5).
-				Italic(true).
-				Width(m.width - 20).
-				Render("  💡 " + option.Reasoning)
-			optionLines = append(optionLines, reasoning)
-
-			content = append(content, strings.Join(optionLines, "\n"))
-			content = append(content, "") // Spacing between options
+			content = append(content, "") // Space between options
 		}
 
-		// Scaling explanations section
+		// What each setting does - simplified
 		content = append(content, "")
 		explainTitle := lipgloss.NewStyle().Foreground(tokyoPurple).Bold(true).Render("📚 What Each Setting Does")
 		content = append(content, explainTitle)
 
-		configManager := NewConfigManager(m.isDemoMode)
-		explanations := configManager.GetScalingExplanations()
-
 		explainItems := []string{
-			fmt.Sprintf("%s: %s",
-				lipgloss.NewStyle().Foreground(tokyoBlue).Bold(true).Render("Monitor Scale"),
-				lipgloss.NewStyle().Foreground(tokyoSubtle).Width(m.width-25).Render(explanations["monitor"])),
-			fmt.Sprintf("%s: %s",
-				lipgloss.NewStyle().Foreground(tokyoCyan).Bold(true).Render("GTK Scale"),
-				lipgloss.NewStyle().Foreground(tokyoSubtle).Width(m.width-25).Render(explanations["gtk"])),
-			fmt.Sprintf("%s: %s",
-				lipgloss.NewStyle().Foreground(tokyoYellow).Bold(true).Render("Font DPI"),
-				lipgloss.NewStyle().Foreground(tokyoSubtle).Width(m.width-25).Render(explanations["font"])),
+			"Monitor Scale: Changes compositor-level scaling (immediate effect)",
+			"GTK Scale: Scales GTK applications (requires logout/login)",
+			"Font DPI: Fine-grained text scaling (affects most apps)",
 		}
 
-		explainSection := lipgloss.NewStyle().
-			Background(tokyoSurface).
-			Padding(1, 2).
-			Border(lipgloss.RoundedBorder()).
-			BorderForeground(tokyoPurple).
-			Render(strings.Join(explainItems, "\n\n"))
-
-		content = append(content, explainSection)
+		for _, item := range explainItems {
+			content = append(content, lipgloss.NewStyle().Foreground(tokyoSubtle).Render("  "+item))
+		}
 
 		if m.isDemoMode {
 			content = append(content, "")
 			demoNotice := lipgloss.NewStyle().
 				Foreground(tokyoOrange).
-				Background(tokyoSurface).
-				Padding(0, 1).
-				Border(lipgloss.RoundedBorder()).
-				BorderForeground(tokyoOrange).
 				Render("📱 Demo Mode: Changes will be simulated")
 			content = append(content, demoNotice)
 		}
 	}
 
 	// Instructions
+	content = append(content, "")
 	instructions := []string{
 		lipgloss.NewStyle().Foreground(tokyoGreen).Render("↑↓") +
-			lipgloss.NewStyle().Foreground(tokyoSubtle).Render(" select option"),
+			lipgloss.NewStyle().Foreground(tokyoSubtle).Render(" select"),
 		lipgloss.NewStyle().Foreground(tokyoBlue).Render("⏎") +
-			lipgloss.NewStyle().Foreground(tokyoSubtle).Render(" apply scaling"),
+			lipgloss.NewStyle().Foreground(tokyoSubtle).Render(" apply"),
 		lipgloss.NewStyle().Foreground(tokyoYellow).Render("m") +
-			lipgloss.NewStyle().Foreground(tokyoSubtle).Render(" manual mode"),
+			lipgloss.NewStyle().Foreground(tokyoSubtle).Render(" manual"),
 		lipgloss.NewStyle().Foreground(tokyoPurple).Render("esc") +
 			lipgloss.NewStyle().Foreground(tokyoSubtle).Render(" back"),
 	}
 
-	content = append(content, "")
 	content = append(content, strings.Join(instructions, "  "))
 
-	// Beautiful container
+	// Simple container
 	return lipgloss.NewStyle().
 		Width(m.width - 8).
 		Height(contentHeight - 2).
@@ -929,156 +881,118 @@ func (m Model) renderManualScaling(contentHeight int) string {
 	content = append(content, title)
 	content = append(content, "")
 
-	if len(m.monitors) > 0 {
-		selectedMonitor := m.monitors[m.selectedMonitor]
-
-		// Monitor info card with current scaling
-		monitorHeader := fmt.Sprintf("%s • %s %s",
-			lipgloss.NewStyle().Foreground(tokyoYellow).Bold(true).Render(selectedMonitor.Name),
-			lipgloss.NewStyle().Foreground(tokyoSubtle).Render(selectedMonitor.Make),
-			lipgloss.NewStyle().Foreground(tokyoSubtle).Render(selectedMonitor.Model))
-
-		monitorSpecs := fmt.Sprintf("%dx%d @ %.0fHz • Current Scale: %.2fx",
-			selectedMonitor.Width, selectedMonitor.Height, selectedMonitor.RefreshRate, selectedMonitor.Scale)
-
-		monitorCard := lipgloss.NewStyle().
-			Background(tokyoSurface).
-			Padding(1, 2).
+	// Check bounds to prevent crashes
+	if len(m.monitors) == 0 {
+		content = append(content, lipgloss.NewStyle().
+			Foreground(tokyoRed).
+			Render("No monitors detected. Please go back and check monitor selection."))
+		return lipgloss.NewStyle().
+			Width(m.width - 8).
+			Height(contentHeight - 2).
+			Padding(2).
+			Background(tokyoFloat).
 			Border(lipgloss.RoundedBorder()).
-			BorderForeground(tokyoYellow).
-			Render(fmt.Sprintf("%s\n%s", monitorHeader,
-				lipgloss.NewStyle().Foreground(tokyoComment).Render(monitorSpecs)))
-
-		content = append(content, monitorCard)
-		content = append(content, "")
-
-		// Manual controls section
-		controlsTitle := lipgloss.NewStyle().Foreground(tokyoBlue).Bold(true).Render("⚙️ Scaling Controls")
-		content = append(content, controlsTitle)
-		content = append(content, "")
-
-		// Create three columns for each scaling type
-		monitorCol := []string{
-			lipgloss.NewStyle().Foreground(tokyoBlue).Bold(true).Render("Monitor Scale"),
-			lipgloss.NewStyle().Foreground(tokyoSubtle).Render("(Compositor-level)"),
-			"",
-			lipgloss.NewStyle().Foreground(tokyoGreen).Bold(true).Render(fmt.Sprintf("%.2fx", m.manualMonitorScale)),
-			"",
-			lipgloss.NewStyle().Foreground(tokyoComment).Render("Range: 0.5x - 3.0x"),
-			lipgloss.NewStyle().Foreground(tokyoComment).Render("Step: 0.25x"),
-			"",
-			lipgloss.NewStyle().Foreground(tokyoDark5).Render("Scales everything"),
-			lipgloss.NewStyle().Foreground(tokyoDark5).Render("immediately. Works"),
-			lipgloss.NewStyle().Foreground(tokyoDark5).Render("with all apps."),
-		}
-
-		gtkCol := []string{
-			lipgloss.NewStyle().Foreground(tokyoCyan).Bold(true).Render("GTK Scale"),
-			lipgloss.NewStyle().Foreground(tokyoSubtle).Render("(Application-level)"),
-			"",
-			lipgloss.NewStyle().Foreground(tokyoGreen).Bold(true).Render(fmt.Sprintf("%dx", m.manualGTKScale)),
-			"",
-			lipgloss.NewStyle().Foreground(tokyoComment).Render("Range: 1x - 3x"),
-			lipgloss.NewStyle().Foreground(tokyoComment).Render("Step: 1x (integer)"),
-			"",
-			lipgloss.NewStyle().Foreground(tokyoDark5).Render("Scales GTK apps"),
-			lipgloss.NewStyle().Foreground(tokyoDark5).Render("(most Linux apps)."),
-			lipgloss.NewStyle().Foreground(tokyoDark5).Render("Requires logout."),
-		}
-
-		fontCol := []string{
-			lipgloss.NewStyle().Foreground(tokyoYellow).Bold(true).Render("Font DPI"),
-			lipgloss.NewStyle().Foreground(tokyoSubtle).Render("(Text rendering)"),
-			"",
-			lipgloss.NewStyle().Foreground(tokyoGreen).Bold(true).Render(fmt.Sprintf("%d", m.manualFontDPI)),
-			"",
-			lipgloss.NewStyle().Foreground(tokyoComment).Render("Range: 72 - 288"),
-			lipgloss.NewStyle().Foreground(tokyoComment).Render("Step: 12 DPI"),
-			"",
-			lipgloss.NewStyle().Foreground(tokyoDark5).Render("Fine-grained text"),
-			lipgloss.NewStyle().Foreground(tokyoDark5).Render("scaling. Works with"),
-			lipgloss.NewStyle().Foreground(tokyoDark5).Render("most applications."),
-		}
-
-		// Calculate effective resolution
-		effectiveWidth := int(float64(selectedMonitor.Width) / m.manualMonitorScale)
-		effectiveHeight := int(float64(selectedMonitor.Height) / m.manualMonitorScale)
-
-		// Render columns side by side
-		colWidth := (m.width - 12) / 3
-
-		for i, col := range [][]string{monitorCol, gtkCol, fontCol} {
-			for j, line := range col {
-				if len(content) <= j+len(content)-len(monitorCol) {
-					content = append(content, "")
-				}
-				// Style each column
-				styledLine := lipgloss.NewStyle().
-					Width(colWidth).
-					Align(lipgloss.Left).
-					Render(line)
-
-				if i == 0 {
-					content[len(content)-len(monitorCol)+j] = styledLine
-				} else {
-					content[len(content)-len(monitorCol)+j] += styledLine
-				}
-			}
-		}
-
-		// Results preview section
-		content = append(content, "")
-		content = append(content, "")
-		resultsTitle := lipgloss.NewStyle().Foreground(tokyoGreen).Bold(true).Render("📊 Preview Results")
-		content = append(content, resultsTitle)
-
-		previewItems := []string{
-			fmt.Sprintf("Effective Resolution: %s",
-				lipgloss.NewStyle().Foreground(tokyoGreen).Bold(true).Render(fmt.Sprintf("%dx%d", effectiveWidth, effectiveHeight))),
-			fmt.Sprintf("Screen Real Estate: %s",
-				lipgloss.NewStyle().Foreground(tokyoBlue).Bold(true).Render(fmt.Sprintf("%.0f%%", 100.0/m.manualMonitorScale))),
-			fmt.Sprintf("Font DPI Multiplier: %s",
-				lipgloss.NewStyle().Foreground(tokyoYellow).Bold(true).Render(fmt.Sprintf("%.1fx", float64(m.manualFontDPI)/96.0))),
-		}
-
-		previewSection := lipgloss.NewStyle().
-			Background(tokyoSurface).
-			Padding(1, 2).
-			Border(lipgloss.RoundedBorder()).
-			BorderForeground(tokyoGreen).
-			Render(strings.Join(previewItems, "\n"))
-
-		content = append(content, previewSection)
-
-		if m.isDemoMode {
-			content = append(content, "")
-			demoNotice := lipgloss.NewStyle().
-				Foreground(tokyoOrange).
-				Background(tokyoSurface).
-				Padding(0, 1).
-				Border(lipgloss.RoundedBorder()).
-				BorderForeground(tokyoOrange).
-				Render("📱 Demo Mode: Use ⏎ to preview changes")
-			content = append(content, demoNotice)
-		}
+			BorderForeground(tokyoPurple).
+			Render(strings.Join(content, "\n"))
 	}
 
-	// Enhanced instructions
+	if m.selectedMonitor >= len(m.monitors) {
+		content = append(content, lipgloss.NewStyle().
+			Foreground(tokyoRed).
+			Render("Invalid monitor selection. Please go back and select a monitor."))
+		return lipgloss.NewStyle().
+			Width(m.width - 8).
+			Height(contentHeight - 2).
+			Padding(2).
+			Background(tokyoFloat).
+			Border(lipgloss.RoundedBorder()).
+			BorderForeground(tokyoPurple).
+			Render(strings.Join(content, "\n"))
+	}
+
+	selectedMonitor := m.monitors[m.selectedMonitor]
+
+	// Monitor info card - simplified
+	monitorInfo := fmt.Sprintf("%s %s %s - %dx%d@%.0fHz (Current: %.2fx)",
+		selectedMonitor.Name, selectedMonitor.Make, selectedMonitor.Model,
+		selectedMonitor.Width, selectedMonitor.Height, selectedMonitor.RefreshRate, selectedMonitor.Scale)
+
+	monitorCard := lipgloss.NewStyle().
+		Background(tokyoSurface).
+		Foreground(tokyoForeground).
+		Padding(1, 2).
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(tokyoYellow).
+		Render(monitorInfo)
+
+	content = append(content, monitorCard)
+	content = append(content, "")
+
+	// Manual controls - simplified layout
+	controlsTitle := lipgloss.NewStyle().Foreground(tokyoBlue).Bold(true).Render("⚙️ Scaling Controls")
+	content = append(content, controlsTitle)
+	content = append(content, "")
+
+	// Monitor Scale Control
+	monitorScaleLabel := lipgloss.NewStyle().Foreground(tokyoBlue).Bold(true).Render("Monitor Scale (Compositor-level)")
+	content = append(content, monitorScaleLabel)
+	monitorScaleValue := fmt.Sprintf("  Current: %.2fx (Range: 0.5x - 3.0x, Step: 0.25x)", m.manualMonitorScale)
+	content = append(content, lipgloss.NewStyle().Foreground(tokyoGreen).Render(monitorScaleValue))
+	content = append(content, lipgloss.NewStyle().Foreground(tokyoSubtle).Render("  Scales everything immediately. Works with all apps."))
+	content = append(content, "")
+
+	// GTK Scale Control
+	gtkScaleLabel := lipgloss.NewStyle().Foreground(tokyoCyan).Bold(true).Render("GTK Scale (Application-level)")
+	content = append(content, gtkScaleLabel)
+	gtkScaleValue := fmt.Sprintf("  Current: %dx (Range: 1x - 3x, Integer only)", m.manualGTKScale)
+	content = append(content, lipgloss.NewStyle().Foreground(tokyoGreen).Render(gtkScaleValue))
+	content = append(content, lipgloss.NewStyle().Foreground(tokyoSubtle).Render("  Scales GTK apps (most Linux apps). Requires logout."))
+	content = append(content, "")
+
+	// Font DPI Control
+	fontDPILabel := lipgloss.NewStyle().Foreground(tokyoYellow).Bold(true).Render("Font DPI (Text rendering)")
+	content = append(content, fontDPILabel)
+	fontDPIValue := fmt.Sprintf("  Current: %d (Range: 72 - 288, Step: 12)", m.manualFontDPI)
+	content = append(content, lipgloss.NewStyle().Foreground(tokyoGreen).Render(fontDPIValue))
+	content = append(content, lipgloss.NewStyle().Foreground(tokyoSubtle).Render("  Fine-grained text scaling. Works with most applications."))
+	content = append(content, "")
+
+	// Results preview
+	effectiveWidth := int(float64(selectedMonitor.Width) / m.manualMonitorScale)
+	effectiveHeight := int(float64(selectedMonitor.Height) / m.manualMonitorScale)
+	screenRealEstate := 100.0 / m.manualMonitorScale
+	fontMultiplier := float64(m.manualFontDPI) / 96.0
+
+	resultsTitle := lipgloss.NewStyle().Foreground(tokyoGreen).Bold(true).Render("📊 Preview Results")
+	content = append(content, resultsTitle)
+	content = append(content, fmt.Sprintf("  Effective Resolution: %dx%d", effectiveWidth, effectiveHeight))
+	content = append(content, fmt.Sprintf("  Screen Real Estate: %.0f%%", screenRealEstate))
+	content = append(content, fmt.Sprintf("  Font DPI Multiplier: %.1fx", fontMultiplier))
+
+	if m.isDemoMode {
+		content = append(content, "")
+		demoNotice := lipgloss.NewStyle().
+			Foreground(tokyoOrange).
+			Render("📱 Demo Mode: Use ⏎ to preview changes")
+		content = append(content, demoNotice)
+	}
+
+	// Instructions
+	content = append(content, "")
 	instructions := []string{
 		lipgloss.NewStyle().Foreground(tokyoBlue).Render("1-3") +
 			lipgloss.NewStyle().Foreground(tokyoSubtle).Render(" select control"),
 		lipgloss.NewStyle().Foreground(tokyoGreen).Render("↑↓") +
 			lipgloss.NewStyle().Foreground(tokyoSubtle).Render(" adjust value"),
 		lipgloss.NewStyle().Foreground(tokyoYellow).Render("⏎") +
-			lipgloss.NewStyle().Foreground(tokyoSubtle).Render(" apply changes"),
+			lipgloss.NewStyle().Foreground(tokyoSubtle).Render(" apply"),
 		lipgloss.NewStyle().Foreground(tokyoPurple).Render("esc") +
-			lipgloss.NewStyle().Foreground(tokyoSubtle).Render(" back to smart scaling"),
+			lipgloss.NewStyle().Foreground(tokyoSubtle).Render(" back"),
 	}
 
-	content = append(content, "")
 	content = append(content, strings.Join(instructions, "  "))
 
-	// Beautiful container
+	// Simple container
 	return lipgloss.NewStyle().
 		Width(m.width - 8).
 		Height(contentHeight - 2).
