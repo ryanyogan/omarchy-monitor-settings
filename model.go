@@ -429,7 +429,12 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 
 	case "enter", " ":
-		if m.mode == ModeScalingOptions && len(m.scalingOptions) > 0 && m.selectedScalingOpt < len(m.scalingOptions) {
+		if m.mode == ModeMonitorSelection {
+			// Monitor selected - return to dashboard
+			m.mode = ModeDashboard
+			m.selectedOption = 0
+			return m, nil
+		} else if m.mode == ModeScalingOptions && len(m.scalingOptions) > 0 && m.selectedScalingOpt < len(m.scalingOptions) {
 			// Show confirmation for smart scaling
 			selectedOption := m.scalingOptions[m.selectedScalingOpt]
 			if len(m.monitors) > 0 && m.selectedMonitor < len(m.monitors) {
@@ -777,10 +782,27 @@ func (m Model) renderDashboard(contentHeight int) string {
 			lipgloss.NewStyle().Foreground(color).Bold(true).Render(monitor.Name),
 		)
 
+		// Add indicator if this is the currently selected monitor for changes
+		if i == m.selectedMonitor {
+			selectedIndicator := lipgloss.NewStyle().
+				Foreground(tokyoOrange).
+				Bold(true).
+				Render(" 👆 CURRENT")
+			header = header + selectedIndicator
+		}
+
 		details := []string{
 			lipgloss.NewStyle().Foreground(tokyoSubtle).Render(fmt.Sprintf("  %s %s", monitor.Make, monitor.Model)),
 			lipgloss.NewStyle().Foreground(tokyoComment).Render(fmt.Sprintf("  %dx%d @ %.0fHz", monitor.Width, monitor.Height, monitor.RefreshRate)),
 			lipgloss.NewStyle().Foreground(tokyoComment).Render(fmt.Sprintf("  Scale: %.1fx", monitor.Scale)),
+		}
+
+		// Add extra info if this is the selected monitor
+		if i == m.selectedMonitor {
+			details = append(details, lipgloss.NewStyle().
+				Foreground(tokyoOrange).
+				Italic(true).
+				Render("  → Scaling changes will apply here"))
 		}
 
 		rightPanel = append(rightPanel, header)
@@ -895,13 +917,21 @@ func (m Model) renderMonitorSelection(contentHeight int) string {
 	// Instructions
 	instructions := []string{
 		lipgloss.NewStyle().Foreground(tokyoYellow).Render("⏎") +
-			lipgloss.NewStyle().Foreground(tokyoSubtle).Render(" Configure selected monitor"),
+			lipgloss.NewStyle().Foreground(tokyoSubtle).Render(" Select monitor and return to dashboard"),
 		lipgloss.NewStyle().Foreground(tokyoPurple).Render("esc") +
 			lipgloss.NewStyle().Foreground(tokyoSubtle).Render(" Return to main menu"),
 	}
 
+	// Add helpful note
+	note := lipgloss.NewStyle().
+		Foreground(tokyoComment).
+		Italic(true).
+		Render("💡 Selected monitor will be marked as CURRENT on the dashboard")
+
 	content = append(content, "")
 	content = append(content, strings.Join(instructions, "  "))
+	content = append(content, "")
+	content = append(content, note)
 
 	// Beautiful container
 	return lipgloss.NewStyle().
