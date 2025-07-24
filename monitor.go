@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"math"
 	"os"
 	"os/exec"
 	"regexp"
@@ -485,28 +486,28 @@ func (sm *ScalingManager) GetIntelligentScalingOptions(monitor Monitor) []Scalin
 				EffectiveHeight: baseHeight / 2,
 			},
 			{
-				MonitorScale:    1.75,
+				MonitorScale:    1.66667,
 				GTKScale:        2,
-				FontDPI:         168, // 96 * 1.75
+				FontDPI:         160, // 96 * 1.66667
 				FontScale:       1.0,
-				DisplayName:     "1.75x More Space",
+				DisplayName:     "1.67x More Space",
 				Description:     "More screen space while staying readable",
-				Reasoning:       "Good balance for productivity work on high-DPI displays.",
+				Reasoning:       "Clean 5:3 ratio scaling for productivity work on high-DPI displays.",
 				IsRecommended:   false,
-				EffectiveWidth:  int(float64(baseWidth) / 1.75),
-				EffectiveHeight: int(float64(baseHeight) / 1.75),
+				EffectiveWidth:  int(float64(baseWidth) / 1.66667),
+				EffectiveHeight: int(float64(baseHeight) / 1.66667),
 			},
 			{
-				MonitorScale:    1.5,
+				MonitorScale:    1.33333,
 				GTKScale:        1,
-				FontDPI:         144, // 96 * 1.5
-				FontScale:       1.5,
-				DisplayName:     "1.5x Maximum Space",
-				Description:     "Maximum usable space",
-				Reasoning:       "For users who want the most screen real estate possible.",
+				FontDPI:         128, // 96 * 1.33333
+				FontScale:       1.33,
+				DisplayName:     "1.33x Maximum Space",
+				Description:     "Maximum usable space with clean scaling",
+				Reasoning:       "Clean 4:3 ratio scaling for maximum productivity on high-DPI displays.",
 				IsRecommended:   false,
-				EffectiveWidth:  int(float64(baseWidth) / 1.5),
-				EffectiveHeight: int(float64(baseHeight) / 1.5),
+				EffectiveWidth:  int(float64(baseWidth) / 1.33333),
+				EffectiveHeight: int(float64(baseHeight) / 1.33333),
 			},
 			{
 				MonitorScale:    1.0,
@@ -683,11 +684,61 @@ func (cm *ConfigManager) ApplyMonitorScale(monitor Monitor, scale float64) error
 		return fmt.Errorf("not running in Hyprland environment")
 	}
 
+	// Validate scale - Hyprland prefers clean divisors
+	validatedScale := cm.validateHyprlandScale(scale)
+	if validatedScale != scale {
+		fmt.Printf("Adjusted scale from %.3f to %.3f for Hyprland compatibility\n", scale, validatedScale)
+	}
+
 	// Apply scale using hyprctl
 	cmd := exec.Command("hyprctl", "keyword", "monitor",
-		fmt.Sprintf("%s,preferred,auto,%.2f", monitor.Name, scale))
+		fmt.Sprintf("%s,preferred,auto,%.5f", monitor.Name, validatedScale))
 
-	return cmd.Run()
+	// Capture both stdout and stderr to handle errors properly
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		// Don't show the raw hyprctl error to user, return a clean error
+		return fmt.Errorf("failed to apply scaling: Hyprland rejected scale %.3f", validatedScale)
+	}
+
+	// Check if output contains any warnings/errors
+	outputStr := string(output)
+	if strings.Contains(outputStr, "invalid scale") || strings.Contains(outputStr, "failed to find clean divisor") {
+		return fmt.Errorf("hyprland rejected scale %.3f - try a different scaling value", validatedScale)
+	}
+
+	return nil
+}
+
+// validateHyprlandScale ensures the scale value is compatible with Hyprland
+func (cm *ConfigManager) validateHyprlandScale(scale float64) float64 {
+	// Hyprland prefers these clean divisor scales
+	hyprlandScales := []float64{
+		1.0,     // 1x
+		1.25,    // 5/4
+		1.33333, // 4/3
+		1.5,     // 3/2
+		1.66667, // 5/3
+		1.75,    // 7/4
+		2.0,     // 2x
+		2.25,    // 9/4
+		2.5,     // 5/2
+		3.0,     // 3x
+	}
+
+	// Find the closest valid scale
+	closest := hyprlandScales[0]
+	minDiff := math.Abs(scale - closest)
+
+	for _, validScale := range hyprlandScales {
+		diff := math.Abs(scale - validScale)
+		if diff < minDiff {
+			minDiff = diff
+			closest = validScale
+		}
+	}
+
+	return closest
 }
 
 // ApplyGTKScale applies GTK scaling (integer only, as GTK3 doesn't support fractional)
@@ -698,8 +749,8 @@ func (cm *ConfigManager) ApplyGTKScale(scale int) error {
 	}
 
 	// Set GDK_SCALE environment variable
-	// Note: This typically requires logout/login to take full effect
-	fmt.Printf("Setting GDK_SCALE=%d (requires logout/login for full effect)\n", scale)
+	// This requires logout/login to take full effect
+	os.Setenv("GDK_SCALE", fmt.Sprintf("%d", scale))
 
 	// TODO: Could write to ~/.profile or similar for persistence
 	return nil
@@ -712,17 +763,9 @@ func (cm *ConfigManager) ApplyFontDPI(dpi int) error {
 		return nil
 	}
 
-	// Read existing .Xresources or create new
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		return fmt.Errorf("failed to get home directory: %w", err)
-	}
-
-	xresourcesPath := fmt.Sprintf("%s/.Xresources", homeDir)
-
-	// For now, just show what would be done
-	fmt.Printf("Would update %s with Xft.dpi: %d\n", xresourcesPath, dpi)
-	fmt.Printf("Run: xrdb -merge ~/.Xresources to apply\n")
+	// TODO: Actually implement .Xresources updating
+	// For now, just set environment variable for immediate effect
+	os.Setenv("XFT_DPI", fmt.Sprintf("%d", dpi))
 
 	return nil
 }

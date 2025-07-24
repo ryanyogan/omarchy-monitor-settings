@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"math"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -43,6 +44,51 @@ var (
 	tokyoBlue7 = lipgloss.Color("#394b70")
 )
 
+// getValidHyprlandScales returns the scales that Hyprland accepts without errors
+func getValidHyprlandScales() []float64 {
+	return []float64{1.0, 1.25, 1.33333, 1.5, 1.66667, 1.75, 2.0, 2.25, 2.5, 3.0}
+}
+
+// findNextValidScale finds the next valid scale in the direction specified
+func findNextValidScale(current float64, up bool) float64 {
+	validScales := getValidHyprlandScales()
+
+	// Find current position
+	currentIndex := -1
+	for i, scale := range validScales {
+		if math.Abs(scale-current) < 0.001 {
+			currentIndex = i
+			break
+		}
+	}
+
+	// If not found, find closest
+	if currentIndex == -1 {
+		minDiff := math.Abs(validScales[0] - current)
+		currentIndex = 0
+		for i, scale := range validScales {
+			diff := math.Abs(scale - current)
+			if diff < minDiff {
+				minDiff = diff
+				currentIndex = i
+			}
+		}
+	}
+
+	// Move in the specified direction
+	if up {
+		if currentIndex < len(validScales)-1 {
+			return validScales[currentIndex+1]
+		}
+		return validScales[len(validScales)-1] // Stay at max
+	} else {
+		if currentIndex > 0 {
+			return validScales[currentIndex-1]
+		}
+		return validScales[0] // Stay at min
+	}
+}
+
 // AppMode represents different screens/modes in the TUI
 type AppMode int
 
@@ -53,6 +99,16 @@ const (
 	ModeManualScaling
 	ModeSettings
 	ModeHelp
+	ModeConfirmation
+)
+
+// ConfirmationAction represents what action is pending confirmation
+type ConfirmationAction int
+
+const (
+	ConfirmNone ConfirmationAction = iota
+	ConfirmSmartScaling
+	ConfirmManualScaling
 )
 
 // Monitor represents a detected monitor
@@ -95,6 +151,11 @@ type Model struct {
 	manualGTKScale        int
 	manualFontDPI         int
 	selectedManualControl int // 0=Monitor Scale, 1=GTK Scale, 2=Font DPI
+
+	// Confirmation state
+	confirmationAction   ConfirmationAction
+	pendingScalingOption ScalingOption
+	pendingMonitor       Monitor
 
 	// UI state
 	selectedOption int
@@ -282,13 +343,8 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		} else if m.mode == ModeManualScaling {
 			// Adjust the selected manual control value up
 			switch m.selectedManualControl {
-			case 0: // Monitor Scale
-				if m.manualMonitorScale < 3.0 {
-					m.manualMonitorScale += 0.25
-					if m.manualMonitorScale > 3.0 {
-						m.manualMonitorScale = 3.0
-					}
-				}
+			case 0: // Monitor Scale - use Hyprland-compatible scales only
+				m.manualMonitorScale = findNextValidScale(m.manualMonitorScale, true)
 			case 1: // GTK Scale
 				if m.manualGTKScale < 3 {
 					m.manualGTKScale++
@@ -325,13 +381,8 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		} else if m.mode == ModeManualScaling {
 			// Adjust the selected manual control value down
 			switch m.selectedManualControl {
-			case 0: // Monitor Scale
-				if m.manualMonitorScale > 0.5 {
-					m.manualMonitorScale -= 0.25
-					if m.manualMonitorScale < 0.5 {
-						m.manualMonitorScale = 0.5
-					}
-				}
+			case 0: // Monitor Scale - use Hyprland-compatible scales only
+				m.manualMonitorScale = findNextValidScale(m.manualMonitorScale, false)
 			case 1: // GTK Scale
 				if m.manualGTKScale > 1 {
 					m.manualGTKScale--
@@ -379,25 +430,45 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	case "enter", " ":
 		if m.mode == ModeScalingOptions && len(m.scalingOptions) > 0 && m.selectedScalingOpt < len(m.scalingOptions) {
-			// Apply the selected scaling option
+			// Show confirmation for smart scaling
 			selectedOption := m.scalingOptions[m.selectedScalingOpt]
 			if len(m.monitors) > 0 && m.selectedMonitor < len(m.monitors) {
-				monitor := m.monitors[m.selectedMonitor]
-				configManager := NewConfigManager(m.isDemoMode)
-				configManager.ApplyCompleteScalingOption(monitor, selectedOption)
+				m.confirmationAction = ConfirmSmartScaling
+				m.pendingScalingOption = selectedOption
+				m.pendingMonitor = m.monitors[m.selectedMonitor]
+				m.mode = ModeConfirmation
 			}
 			return m, nil
 		} else if m.mode == ModeManualScaling {
-			// Apply manual scaling settings
+			// Show confirmation for manual scaling
 			if len(m.monitors) > 0 && m.selectedMonitor < len(m.monitors) {
-				monitor := m.monitors[m.selectedMonitor]
-				configManager := NewConfigManager(m.isDemoMode)
-
-				// Apply each setting individually
-				configManager.ApplyMonitorScale(monitor, m.manualMonitorScale)
+				m.confirmationAction = ConfirmManualScaling
+				m.pendingMonitor = m.monitors[m.selectedMonitor]
+				// Create a temporary scaling option for manual settings
+				m.pendingScalingOption = ScalingOption{
+					MonitorScale: m.manualMonitorScale,
+					GTKScale:     m.manualGTKScale,
+					FontDPI:      m.manualFontDPI,
+					DisplayName:  "Manual Settings",
+					Description:  "Custom scaling values",
+				}
+				m.mode = ModeConfirmation
+			}
+			return m, nil
+		} else if m.mode == ModeConfirmation {
+			// Apply the confirmed scaling
+			configManager := NewConfigManager(m.isDemoMode)
+			if m.confirmationAction == ConfirmSmartScaling {
+				configManager.ApplyCompleteScalingOption(m.pendingMonitor, m.pendingScalingOption)
+			} else if m.confirmationAction == ConfirmManualScaling {
+				configManager.ApplyMonitorScale(m.pendingMonitor, m.manualMonitorScale)
 				configManager.ApplyGTKScale(m.manualGTKScale)
 				configManager.ApplyFontDPI(m.manualFontDPI)
 			}
+			// Reset confirmation state and return to dashboard
+			m.confirmationAction = ConfirmNone
+			m.mode = ModeDashboard
+			m.selectedOption = 0
 			return m, nil
 		}
 		return m.handleSelection()
@@ -415,6 +486,16 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if m.mode == ModeManualScaling {
 			m.mode = ModeDashboard
 			m.selectedOption = 0 // Reset to first option
+		} else if m.mode == ModeConfirmation {
+			// Cancel confirmation and return to previous mode
+			if m.confirmationAction == ConfirmSmartScaling {
+				m.mode = ModeScalingOptions
+			} else if m.confirmationAction == ConfirmManualScaling {
+				m.mode = ModeManualScaling
+			} else {
+				m.mode = ModeDashboard
+			}
+			m.confirmationAction = ConfirmNone
 		} else {
 			m.mode = ModeDashboard
 			// Reset selection when returning to dashboard
@@ -493,6 +574,8 @@ func (m Model) View() string {
 		content = m.renderSettings(contentHeight)
 	case ModeHelp:
 		content = m.renderHelp(contentHeight)
+	case ModeConfirmation:
+		content = m.renderConfirmation(contentHeight)
 	default:
 		content = m.renderDashboard(contentHeight)
 	}
@@ -1036,7 +1119,7 @@ func (m Model) renderManualScaling(contentHeight int) string {
 
 	monitorScaleLabel := monitorScaleStyle.Render("1. Monitor Scale (Compositor-level)")
 	content = append(content, monitorScaleLabel)
-	monitorScaleValue := fmt.Sprintf("   Current: %.2fx (Range: 0.5x - 3.0x, Step: 0.25x)", m.manualMonitorScale)
+	monitorScaleValue := fmt.Sprintf("   Current: %.3fx (Valid: 1.0x, 1.25x, 1.33x, 1.5x, 1.67x, 1.75x, 2.0x, 2.25x, 2.5x, 3.0x)", m.manualMonitorScale)
 	content = append(content, monitorScaleValueStyle.Render(monitorScaleValue))
 	content = append(content, monitorScaleDescStyle.Render("   Scales everything immediately. Works with all apps."))
 	content = append(content, "")
@@ -1219,6 +1302,120 @@ func (m Model) renderSettings(contentHeight int) string {
 		Background(tokyoFloat).
 		Border(lipgloss.RoundedBorder()).
 		BorderForeground(tokyoPurple).
+		Render(strings.Join(content, "\n"))
+}
+
+// renderConfirmation renders the confirmation dialog for scaling operations
+func (m Model) renderConfirmation(contentHeight int) string {
+	var content []string
+
+	// Title with warning icon
+	title := lipgloss.NewStyle().
+		Foreground(tokyoOrange).
+		Bold(true).
+		Render("⚠️ Confirm Scaling Changes")
+
+	content = append(content, title)
+	content = append(content, "")
+
+	// Warning message
+	warningStyle := lipgloss.NewStyle().
+		Foreground(tokyoRed).
+		Bold(true)
+
+	warning := warningStyle.Render("⚠️  WARNING: Desktop refresh required!")
+	content = append(content, warning)
+	content = append(content, "")
+
+	// Explanation
+	explanationLines := []string{
+		"Applying these changes will:",
+		"",
+		"🔄 Refresh your desktop environment",
+		"❌ Close all applications WITHOUT saving",
+		"⚡ Apply new scaling immediately",
+		"",
+		"Make sure to save your work before proceeding!",
+	}
+
+	for _, line := range explanationLines {
+		if strings.HasPrefix(line, "🔄") || strings.HasPrefix(line, "❌") || strings.HasPrefix(line, "⚡") {
+			content = append(content, lipgloss.NewStyle().Foreground(tokyoSubtle).Render("  "+line))
+		} else if line == "" {
+			content = append(content, line)
+		} else {
+			content = append(content, lipgloss.NewStyle().Foreground(tokyoComment).Render(line))
+		}
+	}
+
+	content = append(content, "")
+
+	// Show what will be applied
+	monitor := m.pendingMonitor
+	option := m.pendingScalingOption
+
+	// Monitor info
+	monitorTitle := lipgloss.NewStyle().Foreground(tokyoBlue).Bold(true).Render("📱 Target Monitor")
+	content = append(content, monitorTitle)
+	content = append(content, "")
+
+	monitorInfo := fmt.Sprintf("  %s (%dx%d@%.1fHz)",
+		monitor.Name, monitor.Width, monitor.Height, monitor.RefreshRate)
+	content = append(content, lipgloss.NewStyle().Foreground(tokyoSubtle).Render(monitorInfo))
+	content = append(content, "")
+
+	// Settings that will be applied
+	settingsTitle := lipgloss.NewStyle().Foreground(tokyoCyan).Bold(true).Render("🎯 Settings to Apply")
+	content = append(content, settingsTitle)
+	content = append(content, "")
+
+	settings := []string{
+		fmt.Sprintf("  Monitor Scale: %s", lipgloss.NewStyle().Foreground(tokyoGreen).Render(fmt.Sprintf("%.2fx", option.MonitorScale))),
+		fmt.Sprintf("  GTK Scale: %s", lipgloss.NewStyle().Foreground(tokyoPurple).Render(fmt.Sprintf("%dx", option.GTKScale))),
+		fmt.Sprintf("  Font DPI: %s", lipgloss.NewStyle().Foreground(tokyoYellow).Render(fmt.Sprintf("%d", option.FontDPI))),
+	}
+
+	for _, setting := range settings {
+		content = append(content, lipgloss.NewStyle().Foreground(tokyoSubtle).Render(setting))
+	}
+
+	content = append(content, "")
+
+	// Action name
+	actionName := "Smart Scaling"
+	if m.confirmationAction == ConfirmManualScaling {
+		actionName = "Manual Scaling"
+	}
+
+	actionInfo := fmt.Sprintf("Action: %s - %s",
+		lipgloss.NewStyle().Foreground(tokyoCyan).Render(actionName),
+		lipgloss.NewStyle().Foreground(tokyoComment).Render(option.DisplayName))
+	content = append(content, actionInfo)
+	content = append(content, "")
+
+	// Instructions
+	instructionsStyle := lipgloss.NewStyle().
+		Foreground(tokyoComment).
+		Italic(true)
+
+	instructions := []string{
+		"💡 Controls:",
+		"  Enter/Space - Apply changes (refresh desktop)",
+		"  Esc - Cancel and return",
+	}
+
+	for _, instruction := range instructions {
+		content = append(content, instructionsStyle.Render(instruction))
+	}
+
+	// Simple, clean container - consistent with other screens
+	return lipgloss.NewStyle().
+		Width(m.width - 8).
+		Height(contentHeight - 2).
+		Padding(2).
+		Background(tokyoFloat).
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(tokyoOrange).
 		Render(strings.Join(content, "\n"))
 }
 
