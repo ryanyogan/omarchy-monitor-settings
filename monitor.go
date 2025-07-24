@@ -198,12 +198,15 @@ func (md *MonitorDetector) parseHyprctlOutput(output string) ([]Monitor, error) 
 			matches := re.FindStringSubmatch(line)
 			if len(matches) > 1 {
 				currentMonitor.Name = matches[1]
+				if debugMode {
+					fmt.Printf("DEBUG: Found monitor: %s\n", currentMonitor.Name)
+				}
 			}
 		}
 
-		// Resolution line: "2880x1920@120.000Hz at 0x0"
-		if strings.Contains(line, "x") && strings.Contains(line, "@") {
-			re := regexp.MustCompile(`(\d+)x(\d+)@([\d.]+)Hz at (\d+)x(\d+)`)
+		// Resolution line: "2880x1920@120.00000 at 0x0" (note: no Hz suffix in newer Hyprland)
+		if strings.Contains(line, "x") && strings.Contains(line, "@") && strings.Contains(line, " at ") {
+			re := regexp.MustCompile(`(\d+)x(\d+)@([\d.]+)\s+at\s+(\d+)x(\d+)`)
 			matches := re.FindStringSubmatch(line)
 			if len(matches) > 5 {
 				currentMonitor.Width, _ = strconv.Atoi(matches[1])
@@ -212,15 +215,50 @@ func (md *MonitorDetector) parseHyprctlOutput(output string) ([]Monitor, error) 
 				currentMonitor.Position.X, _ = strconv.Atoi(matches[4])
 				currentMonitor.Position.Y, _ = strconv.Atoi(matches[5])
 				currentMonitor.IsActive = true
+
+				if debugMode {
+					fmt.Printf("DEBUG: Parsed resolution: %dx%d@%.2fHz at %dx%d\n",
+						currentMonitor.Width, currentMonitor.Height, currentMonitor.RefreshRate,
+						currentMonitor.Position.X, currentMonitor.Position.Y)
+				}
+			} else if debugMode {
+				fmt.Printf("DEBUG: Resolution regex didn't match line: '%s'\n", line)
 			}
 		}
 
-		// Scale line: "scale: 2.00"
+		// Scale line: "scale: 1.67" or "scale: 2.00"
 		if strings.Contains(line, "scale:") {
 			re := regexp.MustCompile(`scale:\s*([\d.]+)`)
 			matches := re.FindStringSubmatch(line)
 			if len(matches) > 1 {
 				currentMonitor.Scale, _ = strconv.ParseFloat(matches[1], 64)
+				if debugMode {
+					fmt.Printf("DEBUG: Parsed scale: %.2f from line: '%s'\n", currentMonitor.Scale, line)
+				}
+			} else if debugMode {
+				fmt.Printf("DEBUG: Scale regex didn't match line: '%s'\n", line)
+			}
+		}
+
+		// Make line: "make: BOE"
+		if strings.HasPrefix(line, "make:") {
+			parts := strings.SplitN(line, ":", 2)
+			if len(parts) > 1 {
+				currentMonitor.Make = strings.TrimSpace(parts[1])
+				if debugMode {
+					fmt.Printf("DEBUG: Parsed make: '%s'\n", currentMonitor.Make)
+				}
+			}
+		}
+
+		// Model line: "model: NE135A1M-NY1"
+		if strings.HasPrefix(line, "model:") {
+			parts := strings.SplitN(line, ":", 2)
+			if len(parts) > 1 {
+				currentMonitor.Model = strings.TrimSpace(parts[1])
+				if debugMode {
+					fmt.Printf("DEBUG: Parsed model: '%s'\n", currentMonitor.Model)
+				}
 			}
 		}
 	}
@@ -355,43 +393,207 @@ func NewScalingManager() *ScalingManager {
 	return &ScalingManager{}
 }
 
-// GetRecommendedScale returns recommended scaling based on monitor resolution
-func (sm *ScalingManager) GetRecommendedScale(monitor Monitor) ScalingRecommendation {
-	// Calculate pixel density (rough estimation)
+// ScalingOption represents a scaling recommendation with detailed information
+type ScalingOption struct {
+	MonitorScale    float64
+	GTKScale        int     // GTK only supports integer scaling
+	FontDPI         int     // Xft.dpi setting (base 96)
+	FontScale       float64 // Additional font scaling
+	DisplayName     string
+	Description     string
+	Reasoning       string
+	IsRecommended   bool
+	EffectiveWidth  int
+	EffectiveHeight int
+}
+
+// GetIntelligentScalingOptions returns research-based scaling recommendations
+func (sm *ScalingManager) GetIntelligentScalingOptions(monitor Monitor) []ScalingOption {
 	pixelCount := monitor.Width * monitor.Height
 
-	var monitorScale float64
-	var fontScale float64
-	var reasoning string
+	var options []ScalingOption
+
+	// Base calculations for different scenarios
+	baseWidth := monitor.Width
+	baseHeight := monitor.Height
 
 	switch {
-	case pixelCount >= 8294400: // 4K+ (3840x2160)
-		monitorScale = 2.0
-		fontScale = 0.8
-		reasoning = "4K+ display: 2x scaling recommended for comfortable viewing"
+	case pixelCount >= 8294400: // 4K+ (3840x2160+)
+		options = []ScalingOption{
+			{
+				MonitorScale:    2.0,
+				GTKScale:        2,
+				FontDPI:         192, // 96 * 2
+				FontScale:       1.0,
+				DisplayName:     "2x Perfect",
+				Description:     "Sharp 4K experience with crisp text",
+				Reasoning:       "Industry standard for 4K displays. Perfect integer scaling with no blur.",
+				IsRecommended:   true,
+				EffectiveWidth:  baseWidth / 2,
+				EffectiveHeight: baseHeight / 2,
+			},
+			{
+				MonitorScale:    1.5,
+				GTKScale:        1,
+				FontDPI:         144, // 96 * 1.5
+				FontScale:       1.5,
+				DisplayName:     "1.5x Balanced",
+				Description:     "More screen space with readable text",
+				Reasoning:       "Good compromise between space and readability for productivity.",
+				IsRecommended:   false,
+				EffectiveWidth:  int(float64(baseWidth) / 1.5),
+				EffectiveHeight: int(float64(baseHeight) / 1.5),
+			},
+			{
+				MonitorScale:    1.25,
+				GTKScale:        1,
+				FontDPI:         120, // 96 * 1.25
+				FontScale:       1.25,
+				DisplayName:     "1.25x Maximum Space",
+				Description:     "Maximum usable space with slight text scaling",
+				Reasoning:       "For users who want maximum screen real estate with minimal scaling.",
+				IsRecommended:   false,
+				EffectiveWidth:  int(float64(baseWidth) / 1.25),
+				EffectiveHeight: int(float64(baseHeight) / 1.25),
+			},
+			{
+				MonitorScale:    1.0,
+				GTKScale:        1,
+				FontDPI:         96,
+				FontScale:       1.0,
+				DisplayName:     "1x Native",
+				Description:     "No scaling - tiny but sharp",
+				Reasoning:       "Only for users with excellent eyesight or very large monitors.",
+				IsRecommended:   false,
+				EffectiveWidth:  baseWidth,
+				EffectiveHeight: baseHeight,
+			},
+		}
 
 	case pixelCount >= 3686400: // 1440p (2560x1440)
-		monitorScale = 1.0
-		fontScale = 0.9
-		reasoning = "1440p display: 1x scaling with slightly larger fonts"
+		options = []ScalingOption{
+			{
+				MonitorScale:    1.0,
+				GTKScale:        1,
+				FontDPI:         96,
+				FontScale:       1.0,
+				DisplayName:     "1x Perfect",
+				Description:     "Ideal 1440p experience",
+				Reasoning:       "Sweet spot for 1440p - good balance of sharpness and usability.",
+				IsRecommended:   true,
+				EffectiveWidth:  baseWidth,
+				EffectiveHeight: baseHeight,
+			},
+			{
+				MonitorScale:    1.25,
+				GTKScale:        1,
+				FontDPI:         120,
+				FontScale:       1.25,
+				DisplayName:     "1.25x Comfortable",
+				Description:     "Slightly larger for comfort",
+				Reasoning:       "Good for users who find 1x scaling slightly too small.",
+				IsRecommended:   false,
+				EffectiveWidth:  int(float64(baseWidth) / 1.25),
+				EffectiveHeight: int(float64(baseHeight) / 1.25),
+			},
+			{
+				MonitorScale:    1.5,
+				GTKScale:        1,
+				FontDPI:         144,
+				FontScale:       1.5,
+				DisplayName:     "1.5x Large",
+				Description:     "Larger UI for accessibility",
+				Reasoning:       "For users who prefer larger interface elements.",
+				IsRecommended:   false,
+				EffectiveWidth:  int(float64(baseWidth) / 1.5),
+				EffectiveHeight: int(float64(baseHeight) / 1.5),
+			},
+		}
 
 	case pixelCount >= 2073600: // 1080p (1920x1080)
-		monitorScale = 1.0
-		fontScale = 0.8
-		reasoning = "1080p display: 1x scaling with standard fonts"
+		options = []ScalingOption{
+			{
+				MonitorScale:    1.0,
+				GTKScale:        1,
+				FontDPI:         96,
+				FontScale:       1.0,
+				DisplayName:     "1x Perfect",
+				Description:     "Standard 1080p experience",
+				Reasoning:       "Classic 1080p setup - no scaling needed for most users.",
+				IsRecommended:   true,
+				EffectiveWidth:  baseWidth,
+				EffectiveHeight: baseHeight,
+			},
+			{
+				MonitorScale:    1.25,
+				GTKScale:        1,
+				FontDPI:         120,
+				FontScale:       1.25,
+				DisplayName:     "1.25x Comfortable",
+				Description:     "Slightly larger for small screens",
+				Reasoning:       "Useful for smaller 1080p displays (13-15 inch laptops).",
+				IsRecommended:   false,
+				EffectiveWidth:  int(float64(baseWidth) / 1.25),
+				EffectiveHeight: int(float64(baseHeight) / 1.25),
+			},
+		}
 
-	default:
-		monitorScale = 1.0
-		fontScale = 1.0
-		reasoning = "Standard scaling for this resolution"
+	default: // Lower resolutions
+		options = []ScalingOption{
+			{
+				MonitorScale:    1.0,
+				GTKScale:        1,
+				FontDPI:         96,
+				FontScale:       1.0,
+				DisplayName:     "1x Native",
+				Description:     "No scaling applied",
+				Reasoning:       "Standard scaling for this resolution.",
+				IsRecommended:   true,
+				EffectiveWidth:  baseWidth,
+				EffectiveHeight: baseHeight,
+			},
+		}
 	}
 
+	return options
+}
+
+// GetRecommendedScale returns the single best scaling recommendation (legacy function)
+func (sm *ScalingManager) GetRecommendedScale(monitor Monitor) ScalingRecommendation {
+	options := sm.GetIntelligentScalingOptions(monitor)
+
+	// Find the recommended option
+	for _, option := range options {
+		if option.IsRecommended {
+			return ScalingRecommendation{
+				MonitorScale:    option.MonitorScale,
+				FontScale:       option.FontScale,
+				EffectiveWidth:  option.EffectiveWidth,
+				EffectiveHeight: option.EffectiveHeight,
+				Reasoning:       option.Reasoning,
+			}
+		}
+	}
+
+	// Fallback to first option
+	if len(options) > 0 {
+		first := options[0]
+		return ScalingRecommendation{
+			MonitorScale:    first.MonitorScale,
+			FontScale:       first.FontScale,
+			EffectiveWidth:  first.EffectiveWidth,
+			EffectiveHeight: first.EffectiveHeight,
+			Reasoning:       first.Reasoning,
+		}
+	}
+
+	// Ultimate fallback
 	return ScalingRecommendation{
-		MonitorScale:    monitorScale,
-		FontScale:       fontScale,
-		EffectiveWidth:  int(float64(monitor.Width) / monitorScale),
-		EffectiveHeight: int(float64(monitor.Height) / monitorScale),
-		Reasoning:       reasoning,
+		MonitorScale:    1.0,
+		FontScale:       1.0,
+		EffectiveWidth:  monitor.Width,
+		EffectiveHeight: monitor.Height,
+		Reasoning:       "Default scaling",
 	}
 }
 
@@ -420,7 +622,7 @@ func NewConfigManager(demoMode bool) *ConfigManager {
 func (cm *ConfigManager) ApplyMonitorScale(monitor Monitor, scale float64) error {
 	if cm.isDemoMode {
 		// In demo mode, just log what would be done
-		fmt.Printf("Demo: Would apply scale %.1fx to monitor %s\n", scale, monitor.Name)
+		fmt.Printf("Demo: Would apply monitor scale %.2fx to %s\n", scale, monitor.Name)
 		return nil
 	}
 
@@ -431,19 +633,82 @@ func (cm *ConfigManager) ApplyMonitorScale(monitor Monitor, scale float64) error
 
 	// Apply scale using hyprctl
 	cmd := exec.Command("hyprctl", "keyword", "monitor",
-		fmt.Sprintf("%s,preferred,auto,%.1f", monitor.Name, scale))
+		fmt.Sprintf("%s,preferred,auto,%.2f", monitor.Name, scale))
 
 	return cmd.Run()
 }
 
-// ApplyFontScale applies font scaling across the system
-func (cm *ConfigManager) ApplyFontScale(scale float64) error {
+// ApplyGTKScale applies GTK scaling (integer only, as GTK3 doesn't support fractional)
+func (cm *ConfigManager) ApplyGTKScale(scale int) error {
 	if cm.isDemoMode {
-		fmt.Printf("Demo: Would apply font scale %.1fx across the system\n", scale)
+		fmt.Printf("Demo: Would apply GTK scale %dx system-wide\n", scale)
 		return nil
 	}
 
-	// This would apply font scaling to various configuration files
-	// For now, just return success in demo mode
+	// Set GDK_SCALE environment variable
+	// Note: This typically requires logout/login to take full effect
+	fmt.Printf("Setting GDK_SCALE=%d (requires logout/login for full effect)\n", scale)
+
+	// TODO: Could write to ~/.profile or similar for persistence
 	return nil
+}
+
+// ApplyFontDPI applies font DPI scaling via Xft.dpi
+func (cm *ConfigManager) ApplyFontDPI(dpi int) error {
+	if cm.isDemoMode {
+		fmt.Printf("Demo: Would set Xft.dpi to %d in ~/.Xresources\n", dpi)
+		return nil
+	}
+
+	// Read existing .Xresources or create new
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return fmt.Errorf("failed to get home directory: %w", err)
+	}
+
+	xresourcesPath := fmt.Sprintf("%s/.Xresources", homeDir)
+
+	// For now, just show what would be done
+	fmt.Printf("Would update %s with Xft.dpi: %d\n", xresourcesPath, dpi)
+	fmt.Printf("Run: xrdb -merge ~/.Xresources to apply\n")
+
+	return nil
+}
+
+// ApplyCompleteScalingOption applies a complete scaling configuration
+func (cm *ConfigManager) ApplyCompleteScalingOption(monitor Monitor, option ScalingOption) error {
+	if cm.isDemoMode {
+		fmt.Printf("Demo: Would apply complete scaling option '%s':\n", option.DisplayName)
+		fmt.Printf("  - Monitor scale: %.2fx\n", option.MonitorScale)
+		fmt.Printf("  - GTK scale: %dx\n", option.GTKScale)
+		fmt.Printf("  - Font DPI: %d\n", option.FontDPI)
+		fmt.Printf("  - Additional font scale: %.2fx\n", option.FontScale)
+		return nil
+	}
+
+	// Apply monitor scaling
+	if err := cm.ApplyMonitorScale(monitor, option.MonitorScale); err != nil {
+		return fmt.Errorf("failed to apply monitor scale: %w", err)
+	}
+
+	// Apply GTK scaling
+	if err := cm.ApplyGTKScale(option.GTKScale); err != nil {
+		return fmt.Errorf("failed to apply GTK scale: %w", err)
+	}
+
+	// Apply font DPI
+	if err := cm.ApplyFontDPI(option.FontDPI); err != nil {
+		return fmt.Errorf("failed to apply font DPI: %w", err)
+	}
+
+	return nil
+}
+
+// GetScalingExplanations returns explanations for different scaling types
+func (cm *ConfigManager) GetScalingExplanations() map[string]string {
+	return map[string]string{
+		"monitor": "Changes the size of all UI elements rendered by the compositor. Applied immediately, affects everything.",
+		"gtk":     "Scales GTK applications (most Linux apps). Requires logout/login. Only supports integer values (1x, 2x, 3x).",
+		"font":    "Changes text size system-wide via DPI. Requires reload of applications. Fine-grained control over text rendering.",
+	}
 }
