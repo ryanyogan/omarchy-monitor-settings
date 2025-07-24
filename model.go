@@ -175,15 +175,35 @@ func (m *Model) initStyles() {
 func (m *Model) loadMonitors() {
 	detector := NewMonitorDetector()
 	monitors, err := detector.DetectMonitors()
+
+	if debugMode {
+		fmt.Printf("DEBUG: DetectMonitors returned %d monitors, error: %v\n", len(monitors), err)
+	}
+
 	if err != nil {
 		// Fallback to demo monitors
+		if debugMode {
+			fmt.Printf("DEBUG: Setting demo mode due to detection error\n")
+		}
 		m.isDemoMode = true
 		monitors, _ = detector.getFallbackMonitors()
+	} else {
+		if debugMode {
+			fmt.Printf("DEBUG: Setting live mode - detected real monitors\n")
+		}
+		m.isDemoMode = false
 	}
 
 	// Override demo mode if force-live flag is set
 	if forceLiveMode {
+		if debugMode {
+			fmt.Printf("DEBUG: Force-live mode enabled, overriding demo mode\n")
+		}
 		m.isDemoMode = false
+	}
+
+	if debugMode {
+		fmt.Printf("DEBUG: Final state - isDemoMode: %v, monitor count: %d\n", m.isDemoMode, len(monitors))
 	}
 
 	m.monitors = monitors

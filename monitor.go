@@ -28,9 +28,25 @@ func (md *MonitorDetector) DetectMonitors() ([]Monitor, error) {
 		md.getFallbackMonitors, // Always succeeds with demo data
 	}
 
-	for _, method := range detectionMethods {
+	if debugMode {
+		fmt.Printf("DEBUG: Starting monitor detection...\n")
+	}
+
+	for i, method := range detectionMethods {
+		if debugMode {
+			methodNames := []string{"hyprctl", "wlr-randr", "xrandr", "fallback"}
+			fmt.Printf("DEBUG: Trying method %d: %s\n", i+1, methodNames[i])
+		}
+
 		monitors, err := method()
+		if debugMode {
+			fmt.Printf("DEBUG: Method returned %d monitors, error: %v\n", len(monitors), err)
+		}
+
 		if err == nil && len(monitors) > 0 {
+			if debugMode {
+				fmt.Printf("DEBUG: Successfully detected %d monitors using %s\n", len(monitors), []string{"hyprctl", "wlr-randr", "xrandr", "fallback"}[i])
+			}
 			return monitors, nil
 		}
 	}
@@ -42,16 +58,39 @@ func (md *MonitorDetector) DetectMonitors() ([]Monitor, error) {
 // detectWithHyprctl detects monitors using hyprctl (Hyprland's control utility)
 func (md *MonitorDetector) detectWithHyprctl() ([]Monitor, error) {
 	if !md.commandExists("hyprctl") {
+		if debugMode {
+			fmt.Printf("DEBUG: hyprctl command not found\n")
+		}
 		return nil, fmt.Errorf("hyprctl not found")
+	}
+
+	if debugMode {
+		fmt.Printf("DEBUG: Found hyprctl, running 'hyprctl monitors'\n")
 	}
 
 	cmd := exec.Command("hyprctl", "monitors")
 	output, err := cmd.Output()
 	if err != nil {
+		if debugMode {
+			fmt.Printf("DEBUG: hyprctl command failed: %v\n", err)
+		}
 		return nil, fmt.Errorf("failed to run hyprctl: %w", err)
 	}
 
-	return md.parseHyprctlOutput(string(output))
+	if debugMode {
+		fmt.Printf("DEBUG: hyprctl output (%d bytes):\n%s\n", len(output), string(output))
+	}
+
+	monitors, parseErr := md.parseHyprctlOutput(string(output))
+	if debugMode {
+		fmt.Printf("DEBUG: Parsed %d monitors from hyprctl output, parse error: %v\n", len(monitors), parseErr)
+		for i, monitor := range monitors {
+			fmt.Printf("DEBUG: Monitor %d: %s (%dx%d@%.1fHz, scale %.1f)\n",
+				i, monitor.Name, monitor.Width, monitor.Height, monitor.RefreshRate, monitor.Scale)
+		}
+	}
+
+	return monitors, parseErr
 }
 
 // detectWithWlrRandr detects monitors using wlr-randr (Wayland display manager)
