@@ -91,9 +91,10 @@ type Model struct {
 	selectedScalingOpt int
 
 	// Manual scaling controls
-	manualMonitorScale float64
-	manualGTKScale     int
-	manualFontDPI      int
+	manualMonitorScale    float64
+	manualGTKScale        int
+	manualFontDPI         int
+	selectedManualControl int // 0=Monitor Scale, 1=GTK Scale, 2=Font DPI
 
 	// UI state
 	selectedOption int
@@ -127,9 +128,10 @@ func NewModel() Model {
 		isDemoMode: true, // Default to demo mode for testing
 
 		// Initialize manual scaling defaults
-		manualMonitorScale: 1.0,
-		manualGTKScale:     1,
-		manualFontDPI:      96,
+		manualMonitorScale:    1.0,
+		manualGTKScale:        1,
+		manualFontDPI:         96,
+		selectedManualControl: 0,
 	}
 
 	// Initialize styles with Tokyo Night theme
@@ -277,6 +279,28 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			if m.selectedScalingOpt > 0 {
 				m.selectedScalingOpt--
 			}
+		} else if m.mode == ModeManualScaling {
+			// Adjust the selected manual control value up
+			switch m.selectedManualControl {
+			case 0: // Monitor Scale
+				if m.manualMonitorScale < 3.0 {
+					m.manualMonitorScale += 0.25
+					if m.manualMonitorScale > 3.0 {
+						m.manualMonitorScale = 3.0
+					}
+				}
+			case 1: // GTK Scale
+				if m.manualGTKScale < 3 {
+					m.manualGTKScale++
+				}
+			case 2: // Font DPI
+				if m.manualFontDPI < 288 {
+					m.manualFontDPI += 12
+					if m.manualFontDPI > 288 {
+						m.manualFontDPI = 288
+					}
+				}
+			}
 		}
 
 	case "down", "j":
@@ -298,6 +322,59 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			if m.selectedScalingOpt < len(m.scalingOptions)-1 {
 				m.selectedScalingOpt++
 			}
+		} else if m.mode == ModeManualScaling {
+			// Adjust the selected manual control value down
+			switch m.selectedManualControl {
+			case 0: // Monitor Scale
+				if m.manualMonitorScale > 0.5 {
+					m.manualMonitorScale -= 0.25
+					if m.manualMonitorScale < 0.5 {
+						m.manualMonitorScale = 0.5
+					}
+				}
+			case 1: // GTK Scale
+				if m.manualGTKScale > 1 {
+					m.manualGTKScale--
+				}
+			case 2: // Font DPI
+				if m.manualFontDPI > 72 {
+					m.manualFontDPI -= 12
+					if m.manualFontDPI < 72 {
+						m.manualFontDPI = 72
+					}
+				}
+			}
+		}
+
+	case "left":
+		if m.mode == ModeManualScaling {
+			// Switch to previous control
+			if m.selectedManualControl > 0 {
+				m.selectedManualControl--
+			}
+		}
+
+	case "right":
+		if m.mode == ModeManualScaling {
+			// Switch to next control
+			if m.selectedManualControl < 2 {
+				m.selectedManualControl++
+			}
+		}
+
+	case "1":
+		if m.mode == ModeManualScaling {
+			m.selectedManualControl = 0 // Monitor Scale
+		}
+
+	case "2":
+		if m.mode == ModeManualScaling {
+			m.selectedManualControl = 1 // GTK Scale
+		}
+
+	case "3":
+		if m.mode == ModeManualScaling {
+			m.selectedManualControl = 2 // Font DPI
 		}
 
 	case "enter", " ":
@@ -308,6 +385,18 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				monitor := m.monitors[m.selectedMonitor]
 				configManager := NewConfigManager(m.isDemoMode)
 				configManager.ApplyCompleteScalingOption(monitor, selectedOption)
+			}
+			return m, nil
+		} else if m.mode == ModeManualScaling {
+			// Apply manual scaling settings
+			if len(m.monitors) > 0 && m.selectedMonitor < len(m.monitors) {
+				monitor := m.monitors[m.selectedMonitor]
+				configManager := NewConfigManager(m.isDemoMode)
+
+				// Apply each setting individually
+				configManager.ApplyMonitorScale(monitor, m.manualMonitorScale)
+				configManager.ApplyGTKScale(m.manualGTKScale)
+				configManager.ApplyFontDPI(m.manualFontDPI)
 			}
 			return m, nil
 		}
@@ -324,7 +413,8 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	case "esc":
 		if m.mode == ModeManualScaling {
-			m.mode = ModeScalingOptions
+			m.mode = ModeDashboard
+			m.selectedOption = 0 // Reset to first option
 		} else {
 			m.mode = ModeDashboard
 			// Reset selection when returning to dashboard
@@ -928,33 +1018,63 @@ func (m Model) renderManualScaling(contentHeight int) string {
 	content = append(content, monitorCard)
 	content = append(content, "")
 
-	// Manual controls - simplified layout
+	// Manual controls - simplified layout with selection indicators
 	controlsTitle := lipgloss.NewStyle().Foreground(tokyoBlue).Bold(true).Render("⚙️ Scaling Controls")
 	content = append(content, controlsTitle)
 	content = append(content, "")
 
 	// Monitor Scale Control
-	monitorScaleLabel := lipgloss.NewStyle().Foreground(tokyoBlue).Bold(true).Render("Monitor Scale (Compositor-level)")
+	monitorScaleStyle := lipgloss.NewStyle().Foreground(tokyoBlue).Bold(true)
+	monitorScaleValueStyle := lipgloss.NewStyle().Foreground(tokyoGreen)
+	monitorScaleDescStyle := lipgloss.NewStyle().Foreground(tokyoSubtle)
+
+	if m.selectedManualControl == 0 {
+		monitorScaleStyle = monitorScaleStyle.Background(tokyoSurface).Padding(0, 1)
+		monitorScaleValueStyle = monitorScaleValueStyle.Background(tokyoSurface).Padding(0, 1)
+		monitorScaleDescStyle = monitorScaleDescStyle.Background(tokyoSurface).Padding(0, 1)
+	}
+
+	monitorScaleLabel := monitorScaleStyle.Render("1. Monitor Scale (Compositor-level)")
 	content = append(content, monitorScaleLabel)
-	monitorScaleValue := fmt.Sprintf("  Current: %.2fx (Range: 0.5x - 3.0x, Step: 0.25x)", m.manualMonitorScale)
-	content = append(content, lipgloss.NewStyle().Foreground(tokyoGreen).Render(monitorScaleValue))
-	content = append(content, lipgloss.NewStyle().Foreground(tokyoSubtle).Render("  Scales everything immediately. Works with all apps."))
+	monitorScaleValue := fmt.Sprintf("   Current: %.2fx (Range: 0.5x - 3.0x, Step: 0.25x)", m.manualMonitorScale)
+	content = append(content, monitorScaleValueStyle.Render(monitorScaleValue))
+	content = append(content, monitorScaleDescStyle.Render("   Scales everything immediately. Works with all apps."))
 	content = append(content, "")
 
 	// GTK Scale Control
-	gtkScaleLabel := lipgloss.NewStyle().Foreground(tokyoCyan).Bold(true).Render("GTK Scale (Application-level)")
+	gtkScaleStyle := lipgloss.NewStyle().Foreground(tokyoCyan).Bold(true)
+	gtkScaleValueStyle := lipgloss.NewStyle().Foreground(tokyoGreen)
+	gtkScaleDescStyle := lipgloss.NewStyle().Foreground(tokyoSubtle)
+
+	if m.selectedManualControl == 1 {
+		gtkScaleStyle = gtkScaleStyle.Background(tokyoSurface).Padding(0, 1)
+		gtkScaleValueStyle = gtkScaleValueStyle.Background(tokyoSurface).Padding(0, 1)
+		gtkScaleDescStyle = gtkScaleDescStyle.Background(tokyoSurface).Padding(0, 1)
+	}
+
+	gtkScaleLabel := gtkScaleStyle.Render("2. GTK Scale (Application-level)")
 	content = append(content, gtkScaleLabel)
-	gtkScaleValue := fmt.Sprintf("  Current: %dx (Range: 1x - 3x, Integer only)", m.manualGTKScale)
-	content = append(content, lipgloss.NewStyle().Foreground(tokyoGreen).Render(gtkScaleValue))
-	content = append(content, lipgloss.NewStyle().Foreground(tokyoSubtle).Render("  Scales GTK apps (most Linux apps). Requires logout."))
+	gtkScaleValue := fmt.Sprintf("   Current: %dx (Range: 1x - 3x, Integer only)", m.manualGTKScale)
+	content = append(content, gtkScaleValueStyle.Render(gtkScaleValue))
+	content = append(content, gtkScaleDescStyle.Render("   Scales GTK apps (most Linux apps). Requires logout."))
 	content = append(content, "")
 
 	// Font DPI Control
-	fontDPILabel := lipgloss.NewStyle().Foreground(tokyoYellow).Bold(true).Render("Font DPI (Text rendering)")
+	fontDPIStyle := lipgloss.NewStyle().Foreground(tokyoYellow).Bold(true)
+	fontDPIValueStyle := lipgloss.NewStyle().Foreground(tokyoGreen)
+	fontDPIDescStyle := lipgloss.NewStyle().Foreground(tokyoSubtle)
+
+	if m.selectedManualControl == 2 {
+		fontDPIStyle = fontDPIStyle.Background(tokyoSurface).Padding(0, 1)
+		fontDPIValueStyle = fontDPIValueStyle.Background(tokyoSurface).Padding(0, 1)
+		fontDPIDescStyle = fontDPIDescStyle.Background(tokyoSurface).Padding(0, 1)
+	}
+
+	fontDPILabel := fontDPIStyle.Render("3. Font DPI (Text rendering)")
 	content = append(content, fontDPILabel)
-	fontDPIValue := fmt.Sprintf("  Current: %d (Range: 72 - 288, Step: 12)", m.manualFontDPI)
-	content = append(content, lipgloss.NewStyle().Foreground(tokyoGreen).Render(fontDPIValue))
-	content = append(content, lipgloss.NewStyle().Foreground(tokyoSubtle).Render("  Fine-grained text scaling. Works with most applications."))
+	fontDPIValue := fmt.Sprintf("   Current: %d (Range: 72 - 288, Step: 12)", m.manualFontDPI)
+	content = append(content, fontDPIValueStyle.Render(fontDPIValue))
+	content = append(content, fontDPIDescStyle.Render("   Fine-grained text scaling. Works with most applications."))
 	content = append(content, "")
 
 	// Results preview
@@ -982,10 +1102,12 @@ func (m Model) renderManualScaling(contentHeight int) string {
 	instructions := []string{
 		lipgloss.NewStyle().Foreground(tokyoBlue).Render("1-3") +
 			lipgloss.NewStyle().Foreground(tokyoSubtle).Render(" select control"),
+		lipgloss.NewStyle().Foreground(tokyoCyan).Render("←→") +
+			lipgloss.NewStyle().Foreground(tokyoSubtle).Render(" switch control"),
 		lipgloss.NewStyle().Foreground(tokyoGreen).Render("↑↓") +
 			lipgloss.NewStyle().Foreground(tokyoSubtle).Render(" adjust value"),
 		lipgloss.NewStyle().Foreground(tokyoYellow).Render("⏎") +
-			lipgloss.NewStyle().Foreground(tokyoSubtle).Render(" apply"),
+			lipgloss.NewStyle().Foreground(tokyoSubtle).Render(" apply all"),
 		lipgloss.NewStyle().Foreground(tokyoPurple).Render("esc") +
 			lipgloss.NewStyle().Foreground(tokyoSubtle).Render(" back"),
 	}
@@ -1100,89 +1222,110 @@ func (m Model) renderSettings(contentHeight int) string {
 }
 
 func (m Model) renderHelp(contentHeight int) string {
+	var content []string
 
 	// Award-winning help screen
 	title := lipgloss.NewStyle().
 		Foreground(tokyoYellow).
 		Bold(true).
-		Render("Help & Controls")
+		Render("📖 Help & Controls")
 
-	// Navigation section
+	content = append(content, title)
+	content = append(content, "")
+
+	// Navigation section - clean and consistent
+	navTitle := lipgloss.NewStyle().Foreground(tokyoGreen).Bold(true).Render("🎮 Navigation")
+	content = append(content, navTitle)
+	content = append(content, "")
+
 	navItems := []string{
-		lipgloss.NewStyle().Foreground(tokyoGreen).Bold(true).Render("🎮 Navigation"),
-		fmt.Sprintf("%s / %s   Move up/down",
-			lipgloss.NewStyle().Background(tokyoFloat).Foreground(tokyoGreen).Padding(0, 1).Render("↑"),
-			lipgloss.NewStyle().Background(tokyoFloat).Foreground(tokyoGreen).Padding(0, 1).Render("k")),
-		fmt.Sprintf("%s / %s   Move down/up",
-			lipgloss.NewStyle().Background(tokyoFloat).Foreground(tokyoGreen).Padding(0, 1).Render("↓"),
-			lipgloss.NewStyle().Background(tokyoFloat).Foreground(tokyoGreen).Padding(0, 1).Render("j")),
-		fmt.Sprintf("%s      Select option",
-			lipgloss.NewStyle().Background(tokyoFloat).Foreground(tokyoBlue).Padding(0, 1).Render("Enter")),
-		fmt.Sprintf("%s      Alternative select",
-			lipgloss.NewStyle().Background(tokyoFloat).Foreground(tokyoBlue).Padding(0, 1).Render("Space")),
+		fmt.Sprintf("  %s %s   Navigate up/down in menus",
+			lipgloss.NewStyle().Foreground(tokyoGreen).Bold(true).Render("↑↓"),
+			lipgloss.NewStyle().Foreground(tokyoGreen).Render("k j")),
+		fmt.Sprintf("  %s %s   Navigate left/right (manual scaling)",
+			lipgloss.NewStyle().Foreground(tokyoCyan).Bold(true).Render("←→"),
+			lipgloss.NewStyle().Foreground(tokyoCyan).Render("h l")),
+		fmt.Sprintf("  %s       Select option or apply changes",
+			lipgloss.NewStyle().Foreground(tokyoBlue).Bold(true).Render("⏎")),
+		fmt.Sprintf("  %s       Alternative selection",
+			lipgloss.NewStyle().Foreground(tokyoBlue).Render("Space")),
 	}
 
-	navSection := lipgloss.NewStyle().
-		Background(tokyoSurface).
-		Padding(1, 2).
-		Border(lipgloss.RoundedBorder()).
-		BorderForeground(tokyoGreen).
-		Render(strings.Join(navItems, "\n"))
+	for _, item := range navItems {
+		content = append(content, lipgloss.NewStyle().Foreground(tokyoSubtle).Render(item))
+	}
 
-	// Commands section
+	content = append(content, "")
+
+	// Commands section - clean and consistent
+	cmdTitle := lipgloss.NewStyle().Foreground(tokyoBlue).Bold(true).Render("⌨️ Global Commands")
+	content = append(content, cmdTitle)
+	content = append(content, "")
+
 	cmdItems := []string{
-		lipgloss.NewStyle().Foreground(tokyoBlue).Bold(true).Render("⌨️  Global Commands"),
-		fmt.Sprintf("%s / %s   Show this help",
-			lipgloss.NewStyle().Background(tokyoFloat).Foreground(tokyoYellow).Padding(0, 1).Render("h"),
-			lipgloss.NewStyle().Background(tokyoFloat).Foreground(tokyoYellow).Padding(0, 1).Render("?")),
-		fmt.Sprintf("%s      Return to main menu",
-			lipgloss.NewStyle().Background(tokyoFloat).Foreground(tokyoPurple).Padding(0, 1).Render("Esc")),
-		fmt.Sprintf("%s        Quit application",
-			lipgloss.NewStyle().Background(tokyoFloat).Foreground(tokyoRed).Padding(0, 1).Render("q")),
-		fmt.Sprintf("%s   Force quit",
-			lipgloss.NewStyle().Background(tokyoFloat).Foreground(tokyoRed).Padding(0, 1).Render("Ctrl+C")),
+		fmt.Sprintf("  %s %s   Show this help screen",
+			lipgloss.NewStyle().Foreground(tokyoYellow).Bold(true).Render("h"),
+			lipgloss.NewStyle().Foreground(tokyoYellow).Render("?")),
+		fmt.Sprintf("  %s       Return to main menu",
+			lipgloss.NewStyle().Foreground(tokyoPurple).Bold(true).Render("Esc")),
+		fmt.Sprintf("  %s       Quit application",
+			lipgloss.NewStyle().Foreground(tokyoRed).Bold(true).Render("q")),
+		fmt.Sprintf("  %s   Force quit",
+			lipgloss.NewStyle().Foreground(tokyoRed).Bold(true).Render("Ctrl+C")),
 	}
 
-	cmdSection := lipgloss.NewStyle().
-		Background(tokyoSurface).
-		Padding(1, 2).
-		Border(lipgloss.RoundedBorder()).
-		BorderForeground(tokyoBlue).
-		Render(strings.Join(cmdItems, "\n"))
+	for _, item := range cmdItems {
+		content = append(content, lipgloss.NewStyle().Foreground(tokyoSubtle).Render(item))
+	}
 
-	// About section
+	content = append(content, "")
+
+	// Mode-specific controls
+	modeTitle := lipgloss.NewStyle().Foreground(tokyoCyan).Bold(true).Render("🎯 Mode-Specific Controls")
+	content = append(content, modeTitle)
+	content = append(content, "")
+
+	modeItems := []string{
+		fmt.Sprintf("  %s       Switch to manual scaling (from smart scaling)",
+			lipgloss.NewStyle().Foreground(tokyoOrange).Bold(true).Render("m")),
+		fmt.Sprintf("  %s %s %s   Select control in manual scaling",
+			lipgloss.NewStyle().Foreground(tokyoMagenta).Bold(true).Render("1"),
+			lipgloss.NewStyle().Foreground(tokyoMagenta).Bold(true).Render("2"),
+			lipgloss.NewStyle().Foreground(tokyoMagenta).Bold(true).Render("3")),
+	}
+
+	for _, item := range modeItems {
+		content = append(content, lipgloss.NewStyle().Foreground(tokyoSubtle).Render(item))
+	}
+
+	content = append(content, "")
+
+	// About section - clean and minimal
+	aboutTitle := lipgloss.NewStyle().Foreground(tokyoPurple).Bold(true).Render("ℹ️ About")
+	content = append(content, aboutTitle)
+	content = append(content, "")
+
 	aboutItems := []string{
-		lipgloss.NewStyle().Foreground(tokyoPurple).Bold(true).Render("ℹ️  About"),
-		fmt.Sprintf("Theme: %s", lipgloss.NewStyle().Foreground(tokyoPurple).Render("Tokyo Night")),
-		fmt.Sprintf("Target: %s", lipgloss.NewStyle().Foreground(tokyoCyan).Render("Hyprland & Wayland")),
-		fmt.Sprintf("Version: %s", lipgloss.NewStyle().Foreground(tokyoGreen).Render("0.1.0")),
-		fmt.Sprintf("Built with: %s", lipgloss.NewStyle().Foreground(tokyoBlue).Render("Go + Bubbletea")),
+		fmt.Sprintf("  Version: %s", lipgloss.NewStyle().Foreground(tokyoGreen).Render("0.1.0")),
+		fmt.Sprintf("  Theme: %s", lipgloss.NewStyle().Foreground(tokyoPurple).Render("Tokyo Night")),
+		fmt.Sprintf("  Target: %s", lipgloss.NewStyle().Foreground(tokyoCyan).Render("Hyprland & Wayland")),
+		fmt.Sprintf("  Built with: %s", lipgloss.NewStyle().Foreground(tokyoBlue).Render("Go + Bubbletea")),
 	}
 
-	aboutSection := lipgloss.NewStyle().
-		Background(tokyoSurface).
-		Padding(1, 2).
-		Border(lipgloss.RoundedBorder()).
-		BorderForeground(tokyoPurple).
-		Render(strings.Join(aboutItems, "\n"))
-
-	// Combine sections
-	content := []string{
-		title,
-		"",
-		navSection,
-		"",
-		cmdSection,
-		"",
-		aboutSection,
-		"",
-		lipgloss.NewStyle().
-			Foreground(tokyoSubtle).
-			Italic(true).
-			Render("Press Esc to return to the main menu"),
+	for _, item := range aboutItems {
+		content = append(content, lipgloss.NewStyle().Foreground(tokyoSubtle).Render(item))
 	}
 
-	// Beautiful container
+	content = append(content, "")
+
+	// Footer message
+	footer := lipgloss.NewStyle().
+		Foreground(tokyoComment).
+		Italic(true).
+		Render("💡 Press Esc to return to the main menu")
+	content = append(content, footer)
+
+	// Simple, clean container - consistent with other screens
 	return lipgloss.NewStyle().
 		Width(m.width - 8).
 		Height(contentHeight - 2).
