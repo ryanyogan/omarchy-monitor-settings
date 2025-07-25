@@ -6,7 +6,7 @@
 
 ```bash
 # Download and run the installation script
-curl -sSL https://github.com/yourusername/hyprland-monitor-tui/raw/main/install.sh | bash
+curl -sSL https://github.com/ryanyogan/hyprland-monitor-tui/raw/main/install.sh | bash
 
 # Or if you have the source:
 ./install.sh
