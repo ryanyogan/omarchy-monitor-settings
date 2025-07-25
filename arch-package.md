@@ -35,12 +35,12 @@ sudo install -Dm644 hyprland-monitor-tui.desktop /usr/share/applications/hyprlan
 
 ```bash
 # Create source archive
-tar -czf hyprland-monitor-tui-0.1.0.tar.gz \
+tar -czf hyprland-monitor-tui-1.0.0.tar.gz \
     main.go model.go monitor.go go.mod go.sum \
     README.md LICENSE hyprland-monitor-tui.desktop
 
 # Generate checksums
-sha256sum hyprland-monitor-tui-0.1.0.tar.gz
+sha256sum hyprland-monitor-tui-1.0.0.tar.gz
 ```
 
 ### Build with makepkg
@@ -53,7 +53,7 @@ makepkg -si
 makepkg
 
 # Install built package
-sudo pacman -U hyprland-monitor-tui-0.1.0-1-x86_64.pkg.tar.zst
+sudo pacman -U hyprland-monitor-tui-1.0.0-1-x86_64.pkg.tar.zst
 ```
 
 ## 🔧 Arch Linux Compatibility
@@ -164,7 +164,7 @@ hyprland-monitor-tui --debug --no-hyprland-check
 ## 🏷️ Package Information
 
 - **Package Name**: `hyprland-monitor-tui`
-- **Version**: `0.1.0`
+- **Version**: `1.0.0`
 - **Architecture**: `x86_64`, `aarch64`
 - **License**: `MIT`
 - **Dependencies**: `hyprland`

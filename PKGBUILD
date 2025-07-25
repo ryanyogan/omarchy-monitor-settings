@@ -1,6 +1,6 @@
 # Maintainer: Your Name <your.email@example.com>
 pkgname=hyprland-monitor-tui
-pkgver=0.1.0
+pkgver=1.0.0
 pkgrel=1
 pkgdesc="A stunning TUI application for managing Hyprland monitor resolution and scaling"
 arch=('x86_64' 'aarch64')

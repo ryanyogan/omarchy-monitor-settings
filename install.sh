@@ -115,7 +115,7 @@ build_app() {
     export GOOS=linux
     
     go build -v \
-        -ldflags "-s -w -X main.version=0.1.0" \
+        -ldflags "-s -w -X main.version=1.0.0" \
         -o hyprland-monitor-tui .
     
     print_step "Build completed"

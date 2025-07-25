@@ -21,7 +21,6 @@ var (
 	tokyoForeground = lipgloss.Color("#c0caf5")
 	tokyoComment    = lipgloss.Color("#565f89")
 	tokyoSubtle     = lipgloss.Color("#9aa5ce")
-	tokyoDark3      = lipgloss.Color("#545c7e")
 	tokyoDark5      = lipgloss.Color("#737aa2")
 
 	// Accent colors - Full vibrant palette
@@ -33,15 +32,6 @@ var (
 	tokyoRed     = lipgloss.Color("#f7768e")
 	tokyoPurple  = lipgloss.Color("#bb9af7")
 	tokyoMagenta = lipgloss.Color("#c0a8f7")
-	tokyoTeal    = lipgloss.Color("#1abc9c")
-	tokyoPink    = lipgloss.Color("#f7768e")
-
-	// Special Tokyo Night effects
-	tokyoBlue0 = lipgloss.Color("#3d59a1")
-	tokyoBlue1 = lipgloss.Color("#2ac3de")
-	tokyoBlue2 = lipgloss.Color("#0db9d7")
-	tokyoBlue6 = lipgloss.Color("#b4f9f8")
-	tokyoBlue7 = lipgloss.Color("#394b70")
 )
 
 // getValidHyprlandScales returns the scales that Hyprland accepts without errors
@@ -137,6 +127,9 @@ type Model struct {
 	height int
 	ready  bool
 
+	// Services (injected dependencies)
+	services *AppServices
+
 	// Monitor data
 	monitors        []Monitor
 	selectedMonitor int
@@ -172,8 +165,21 @@ type Model struct {
 	successStyle    lipgloss.Style
 }
 
-// NewModel creates and initializes a new Model
+// NewModel creates and initializes a new Model (legacy function for backward compatibility)
 func NewModel() Model {
+	// Create default services for backward compatibility
+	config := &AppConfig{
+		NoHyprlandCheck: noHyprlandCheck,
+		DebugMode:       debugMode,
+		ForceLiveMode:   forceLiveMode,
+		IsTestMode:      false,
+	}
+	services := NewAppServices(config)
+	return NewModelWithServices(services)
+}
+
+// NewModelWithServices creates and initializes a new Model with injected services
+func NewModelWithServices(services *AppServices) Model {
 	m := Model{
 		mode:           ModeDashboard,
 		selectedOption: 0,
@@ -187,6 +193,7 @@ func NewModel() Model {
 			"Exit",
 		},
 		isDemoMode: true, // Default to demo mode for testing
+		services:   services,
 
 		// Initialize manual scaling defaults
 		manualMonitorScale:    1.0,
@@ -203,8 +210,7 @@ func NewModel() Model {
 
 	// Load intelligent scaling options for the first monitor
 	if len(m.monitors) > 0 {
-		scalingManager := NewScalingManager()
-		m.scalingOptions = scalingManager.GetIntelligentScalingOptions(m.monitors[0])
+		m.scalingOptions = services.ScalingManager.GetIntelligentScalingOptions(m.monitors[0])
 	}
 
 	return m
@@ -258,36 +264,39 @@ func (m *Model) initStyles() {
 }
 
 func (m *Model) loadMonitors() {
-	detector := NewMonitorDetector()
-	monitors, err := detector.DetectMonitors()
+	// Use injected monitor detector
+	monitors, err := m.services.MonitorDetector.DetectMonitors()
 
-	if debugMode {
+	if m.services.Config.DebugMode {
 		fmt.Printf("DEBUG: DetectMonitors returned %d monitors, error: %v\n", len(monitors), err)
 	}
 
 	if err != nil {
 		// Fallback to demo monitors
-		if debugMode {
+		if m.services.Config.DebugMode {
 			fmt.Printf("DEBUG: Setting demo mode due to detection error\n")
 		}
 		m.isDemoMode = true
-		monitors, _ = detector.getFallbackMonitors()
+		// Get fallback monitors from the detector
+		if detector, ok := m.services.MonitorDetector.(*MonitorDetector); ok {
+			monitors, _ = detector.getFallbackMonitors()
+		}
 	} else {
-		if debugMode {
+		if m.services.Config.DebugMode {
 			fmt.Printf("DEBUG: Setting live mode - detected real monitors\n")
 		}
 		m.isDemoMode = false
 	}
 
 	// Override demo mode if force-live flag is set
-	if forceLiveMode {
-		if debugMode {
+	if m.services.Config.ForceLiveMode {
+		if m.services.Config.DebugMode {
 			fmt.Printf("DEBUG: Force-live mode enabled, overriding demo mode\n")
 		}
 		m.isDemoMode = false
 	}
 
-	if debugMode {
+	if m.services.Config.DebugMode {
 		fmt.Printf("DEBUG: Final state - isDemoMode: %v, monitor count: %d\n", m.isDemoMode, len(monitors))
 	}
 
@@ -322,64 +331,60 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, tea.Quit
 
 	case "up", "k":
-		if m.mode == ModeDashboard {
+		switch m.mode {
+		case ModeDashboard:
 			if m.selectedOption > 0 {
 				m.selectedOption--
 			}
-		} else if m.mode == ModeMonitorSelection {
+		case ModeMonitorSelection:
 			if m.selectedMonitor > 0 {
 				m.selectedMonitor--
 				// Update scaling options when monitor changes
 				if len(m.monitors) > 0 && m.selectedMonitor < len(m.monitors) {
-					scalingManager := NewScalingManager()
-					m.scalingOptions = scalingManager.GetIntelligentScalingOptions(m.monitors[m.selectedMonitor])
+					m.scalingOptions = m.services.ScalingManager.GetIntelligentScalingOptions(m.monitors[m.selectedMonitor])
 					m.selectedScalingOpt = 0 // Reset to first option
 				}
 			}
-		} else if m.mode == ModeScalingOptions {
+		case ModeScalingOptions:
 			if m.selectedScalingOpt > 0 {
 				m.selectedScalingOpt--
 			}
-		} else if m.mode == ModeManualScaling {
-			// Adjust the selected manual control value up
-			switch m.selectedManualControl {
-			case 0: // Monitor Scale - use Hyprland-compatible scales only
-				m.manualMonitorScale = findNextValidScale(m.manualMonitorScale, true)
-			case 1: // GTK Scale
-				if m.manualGTKScale < 3 {
-					m.manualGTKScale++
-				}
-			case 2: // Font DPI
-				if m.manualFontDPI < 288 {
-					m.manualFontDPI += 12
-					if m.manualFontDPI > 288 {
-						m.manualFontDPI = 288
-					}
-				}
+		case ModeManualScaling:
+			// Navigate to previous control
+			if m.selectedManualControl > 0 {
+				m.selectedManualControl--
 			}
 		}
 
 	case "down", "j":
-		if m.mode == ModeDashboard {
+		switch m.mode {
+		case ModeDashboard:
 			if m.selectedOption < len(m.menuItems)-1 {
 				m.selectedOption++
 			}
-		} else if m.mode == ModeMonitorSelection {
+		case ModeMonitorSelection:
 			if m.selectedMonitor < len(m.monitors)-1 {
 				m.selectedMonitor++
 				// Update scaling options when monitor changes
 				if len(m.monitors) > 0 && m.selectedMonitor < len(m.monitors) {
-					scalingManager := NewScalingManager()
-					m.scalingOptions = scalingManager.GetIntelligentScalingOptions(m.monitors[m.selectedMonitor])
+					m.scalingOptions = m.services.ScalingManager.GetIntelligentScalingOptions(m.monitors[m.selectedMonitor])
 					m.selectedScalingOpt = 0 // Reset to first option
 				}
 			}
-		} else if m.mode == ModeScalingOptions {
+		case ModeScalingOptions:
 			if m.selectedScalingOpt < len(m.scalingOptions)-1 {
 				m.selectedScalingOpt++
 			}
-		} else if m.mode == ModeManualScaling {
-			// Adjust the selected manual control value down
+		case ModeManualScaling:
+			// Navigate to next control
+			if m.selectedManualControl < 2 {
+				m.selectedManualControl++
+			}
+		}
+
+	case "left":
+		if m.mode == ModeManualScaling {
+			// Decrease the selected manual control value
 			switch m.selectedManualControl {
 			case 0: // Monitor Scale - use Hyprland-compatible scales only
 				m.manualMonitorScale = findNextValidScale(m.manualMonitorScale, false)
@@ -397,35 +402,24 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			}
 		}
 
-	case "left":
-		if m.mode == ModeManualScaling {
-			// Switch to previous control
-			if m.selectedManualControl > 0 {
-				m.selectedManualControl--
-			}
-		}
-
 	case "right":
 		if m.mode == ModeManualScaling {
-			// Switch to next control
-			if m.selectedManualControl < 2 {
-				m.selectedManualControl++
+			// Increase the selected manual control value
+			switch m.selectedManualControl {
+			case 0: // Monitor Scale - use Hyprland-compatible scales only
+				m.manualMonitorScale = findNextValidScale(m.manualMonitorScale, true)
+			case 1: // GTK Scale
+				if m.manualGTKScale < 3 {
+					m.manualGTKScale++
+				}
+			case 2: // Font DPI
+				if m.manualFontDPI < 288 {
+					m.manualFontDPI += 12
+					if m.manualFontDPI > 288 {
+						m.manualFontDPI = 288
+					}
+				}
 			}
-		}
-
-	case "1":
-		if m.mode == ModeManualScaling {
-			m.selectedManualControl = 0 // Monitor Scale
-		}
-
-	case "2":
-		if m.mode == ModeManualScaling {
-			m.selectedManualControl = 1 // GTK Scale
-		}
-
-	case "3":
-		if m.mode == ModeManualScaling {
-			m.selectedManualControl = 2 // Font DPI
 		}
 
 	case "enter", " ":
@@ -461,14 +455,14 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			}
 			return m, nil
 		} else if m.mode == ModeConfirmation {
-			// Apply the confirmed scaling
-			configManager := NewConfigManager(m.isDemoMode)
-			if m.confirmationAction == ConfirmSmartScaling {
-				configManager.ApplyCompleteScalingOption(m.pendingMonitor, m.pendingScalingOption)
-			} else if m.confirmationAction == ConfirmManualScaling {
-				configManager.ApplyMonitorScale(m.pendingMonitor, m.manualMonitorScale)
-				configManager.ApplyGTKScale(m.manualGTKScale)
-				configManager.ApplyFontDPI(m.manualFontDPI)
+			// Apply the confirmed scaling using injected config manager
+			switch m.confirmationAction {
+			case ConfirmSmartScaling:
+				m.services.ConfigManager.ApplyCompleteScalingOption(m.pendingMonitor, m.pendingScalingOption)
+			case ConfirmManualScaling:
+				m.services.ConfigManager.ApplyMonitorScale(m.pendingMonitor, m.manualMonitorScale)
+				m.services.ConfigManager.ApplyGTKScale(m.manualGTKScale)
+				m.services.ConfigManager.ApplyFontDPI(m.manualFontDPI)
 			}
 			// Reset confirmation state and return to dashboard
 			m.confirmationAction = ConfirmNone
@@ -488,20 +482,22 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.mode = ModeHelp
 
 	case "esc":
-		if m.mode == ModeManualScaling {
+		switch m.mode {
+		case ModeManualScaling:
 			m.mode = ModeDashboard
 			m.selectedOption = 0 // Reset to first option
-		} else if m.mode == ModeConfirmation {
+		case ModeConfirmation:
 			// Cancel confirmation and return to previous mode
-			if m.confirmationAction == ConfirmSmartScaling {
+			switch m.confirmationAction {
+			case ConfirmSmartScaling:
 				m.mode = ModeScalingOptions
-			} else if m.confirmationAction == ConfirmManualScaling {
+			case ConfirmManualScaling:
 				m.mode = ModeManualScaling
-			} else {
+			default:
 				m.mode = ModeDashboard
 			}
 			m.confirmationAction = ConfirmNone
-		} else {
+		default:
 			m.mode = ModeDashboard
 			// Reset selection when returning to dashboard
 			m.selectedOption = 0
@@ -1213,11 +1209,9 @@ func (m Model) renderManualScaling(contentHeight int) string {
 	// Instructions
 	content = append(content, "")
 	instructions := []string{
-		lipgloss.NewStyle().Foreground(tokyoBlue).Render("1-3") +
+		lipgloss.NewStyle().Foreground(tokyoGreen).Render("↑↓") +
 			lipgloss.NewStyle().Foreground(tokyoSubtle).Render(" select control"),
 		lipgloss.NewStyle().Foreground(tokyoCyan).Render("←→") +
-			lipgloss.NewStyle().Foreground(tokyoSubtle).Render(" switch control"),
-		lipgloss.NewStyle().Foreground(tokyoGreen).Render("↑↓") +
 			lipgloss.NewStyle().Foreground(tokyoSubtle).Render(" adjust value"),
 		lipgloss.NewStyle().Foreground(tokyoYellow).Render("⏎") +
 			lipgloss.NewStyle().Foreground(tokyoSubtle).Render(" apply all"),
@@ -1256,7 +1250,7 @@ func (m Model) renderSettings(contentHeight int) string {
 	content = append(content, "")
 
 	appItems := []string{
-		fmt.Sprintf("  Version: %s", lipgloss.NewStyle().Foreground(tokyoGreen).Render("0.1.0")),
+		fmt.Sprintf("  Version: %s", lipgloss.NewStyle().Foreground(tokyoGreen).Render("1.0.0")),
 		fmt.Sprintf("  Theme: %s", lipgloss.NewStyle().Foreground(tokyoPurple).Render("Tokyo Night")),
 		fmt.Sprintf("  Mode: %s", func() string {
 			if m.isDemoMode {
@@ -1516,10 +1510,10 @@ func (m Model) renderHelp(contentHeight int) string {
 	modeItems := []string{
 		fmt.Sprintf("  %s       Switch to manual scaling (from smart scaling)",
 			lipgloss.NewStyle().Foreground(tokyoOrange).Bold(true).Render("m")),
-		fmt.Sprintf("  %s %s %s   Select control in manual scaling",
-			lipgloss.NewStyle().Foreground(tokyoMagenta).Bold(true).Render("1"),
-			lipgloss.NewStyle().Foreground(tokyoMagenta).Bold(true).Render("2"),
-			lipgloss.NewStyle().Foreground(tokyoMagenta).Bold(true).Render("3")),
+		fmt.Sprintf("  %s       Select control in manual scaling",
+			lipgloss.NewStyle().Foreground(tokyoMagenta).Bold(true).Render("↑↓")),
+		fmt.Sprintf("  %s       Adjust values in manual scaling",
+			lipgloss.NewStyle().Foreground(tokyoMagenta).Bold(true).Render("←→")),
 	}
 
 	for _, item := range modeItems {
@@ -1534,7 +1528,7 @@ func (m Model) renderHelp(contentHeight int) string {
 	content = append(content, "")
 
 	aboutItems := []string{
-		fmt.Sprintf("  Version: %s", lipgloss.NewStyle().Foreground(tokyoGreen).Render("0.1.0")),
+		fmt.Sprintf("  Version: %s", lipgloss.NewStyle().Foreground(tokyoGreen).Render("1.0.0")),
 		fmt.Sprintf("  Theme: %s", lipgloss.NewStyle().Foreground(tokyoPurple).Render("Tokyo Night")),
 		fmt.Sprintf("  Target: %s", lipgloss.NewStyle().Foreground(tokyoCyan).Render("Hyprland & Wayland")),
 		fmt.Sprintf("  Built with: %s", lipgloss.NewStyle().Foreground(tokyoBlue).Render("Go + Bubbletea")),
