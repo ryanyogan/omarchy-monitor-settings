@@ -8,7 +8,7 @@
 2. Available Commands:
    ✓ hyprctl: /usr/bin/hyprctl
    ✗ wlr-randr: not found
-   ✗ xrandr: not found
+   # xrandr support removed
 
 3. hyprctl monitors output:
    --- Raw Output ---

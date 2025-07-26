@@ -1278,7 +1278,6 @@ func (m Model) renderSettings(contentHeight int) string {
 	}{
 		{"Hyprctl", "hyprctl"},
 		{"wlr-randr", "wlr-randr"},
-		{"xrandr", "xrandr"},
 	}
 
 	for _, method := range methods {
@@ -1301,7 +1300,7 @@ func (m Model) renderSettings(contentHeight int) string {
 
 	configItems := []string{
 		fmt.Sprintf("  Target: %s", lipgloss.NewStyle().Foreground(tokyoGreen).Render("Hyprland + Wayland")),
-		fmt.Sprintf("  Fallbacks: %s", lipgloss.NewStyle().Foreground(tokyoBlue).Render("wlr-randr, xrandr")),
+		fmt.Sprintf("  Fallbacks: %s", lipgloss.NewStyle().Foreground(tokyoBlue).Render("wlr-randr")),
 		fmt.Sprintf("  Font Scaling: %s", lipgloss.NewStyle().Foreground(tokyoPurple).Render("GTK, Alacritty, Neovim")),
 	}
 

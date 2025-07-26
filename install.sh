@@ -95,7 +95,7 @@ install_dependencies() {
     # Optional dependencies for better monitor detection (don't fail if unavailable)
     print_info "Installing optional dependencies for better monitor detection..."
     sudo pacman -S --needed wlr-randr 2>/dev/null || print_info "wlr-randr not available, skipping"
-    sudo pacman -S --needed xorg-xrandr 2>/dev/null || print_info "xrandr not available, skipping"
+    # Removed xrandr support - using hyprctl and wlr-randr only
     
     print_step "Build environment ready"
 }

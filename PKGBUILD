@@ -10,7 +10,7 @@ depends=()
 optdepends=(
     'hyprland: Primary target window manager (recommended)'
     'wlr-randr: Wayland display manager fallback'
-    'xorg-xrandr: X11 display manager fallback for compatibility'
+    # Removed xrandr support - using hyprctl and wlr-randr only
 )
 makedepends=()
 source=("$pkgname-$pkgver.tar.gz::file://$PWD")

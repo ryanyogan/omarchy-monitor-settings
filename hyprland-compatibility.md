@@ -49,11 +49,11 @@ echo $HYPRLAND_INSTANCE_SIGNATURE
 
 #### Optional (for better compatibility)
 - `wlr-randr` - Wayland display manager fallback
-- `xorg-xrandr` - X11 fallback for mixed environments
+# Removed xrandr support
 
 All these packages are available in the official Arch repositories:
 ```bash
-sudo pacman -S hyprland go wlr-randr xorg-xrandr
+sudo pacman -S hyprland go wlr-randr
 ```
 
 ### 🧪 **Testing Scenarios**

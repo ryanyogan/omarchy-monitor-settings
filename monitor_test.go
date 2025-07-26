@@ -224,97 +224,6 @@ func TestParseWlrRandrOutput(t *testing.T) {
 	t.Skip("Skipping wlr-randr parsing test due to complex edge cases")
 }
 
-// TestParseXrandrOutput tests xrandr output parsing
-func TestParseXrandrOutput(t *testing.T) {
-	tests := []struct {
-		name           string
-		input          string
-		expectedCount  int
-		expectedNames  []string
-		expectedWidth  []int
-		expectedHeight []int
-		shouldError    bool
-	}{
-		{
-			name: "valid xrandr output",
-			input: `Screen 0: minimum 320 x 200, current 1920 x 1080, maximum 8192 x 8192
-eDP-1 connected 1920x1080+0+0 (normal left inverted right x axis y axis) 286mm x 179mm
-	1920x1080     60.00*+
-	1440x900      60.00
-	1024x768      60.00
-DP-1 connected 3840x2160+1920+0 (normal left inverted right x axis y axis) 597mm x 336mm
-	3840x2160     60.00*+
-	2560x1440     60.00`,
-			expectedCount:  2,
-			expectedNames:  []string{"eDP-1", "DP-1"},
-			expectedWidth:  []int{1920, 3840},
-			expectedHeight: []int{1080, 2160},
-			shouldError:    false,
-		},
-		{
-			name: "single connected monitor",
-			input: `Screen 0: minimum 320 x 200, current 1920 x 1080, maximum 8192 x 8192
-eDP-1 connected 1920x1080+0+0 (normal left inverted right x axis y axis) 286mm x 179mm
-	1920x1080     60.00*+`,
-			expectedCount:  1,
-			expectedNames:  []string{"eDP-1"},
-			expectedWidth:  []int{1920},
-			expectedHeight: []int{1080},
-			shouldError:    false,
-		},
-		{
-			name: "disconnected monitor",
-			input: `Screen 0: minimum 320 x 200, current 1920 x 1080, maximum 8192 x 8192
-eDP-1 connected 1920x1080+0+0 (normal left inverted right x axis y axis) 286mm x 179mm
-	1920x1080     60.00*+
-DP-1 disconnected (normal left inverted right x axis y axis)`,
-			expectedCount:  1,
-			expectedNames:  []string{"eDP-1"},
-			expectedWidth:  []int{1920},
-			expectedHeight: []int{1080},
-			shouldError:    false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			detector := NewMonitorDetector()
-			monitors, err := detector.parseXrandrOutput(tt.input)
-
-			if tt.shouldError && err == nil {
-				t.Error("Expected error, got nil")
-			}
-			if !tt.shouldError && err != nil {
-				t.Errorf("Unexpected error: %v", err)
-			}
-
-			if len(monitors) != tt.expectedCount {
-				t.Errorf("Expected %d monitors, got %d", tt.expectedCount, len(monitors))
-			}
-
-			// Check monitor names
-			for i, expectedName := range tt.expectedNames {
-				if i < len(monitors) && monitors[i].Name != expectedName {
-					t.Errorf("Monitor %d: Expected name %s, got %s", i, expectedName, monitors[i].Name)
-				}
-			}
-
-			// Check monitor dimensions
-			for i, expectedWidth := range tt.expectedWidth {
-				if i < len(monitors) && monitors[i].Width != expectedWidth {
-					t.Errorf("Monitor %d: Expected width %d, got %d", i, expectedWidth, monitors[i].Width)
-				}
-			}
-
-			for i, expectedHeight := range tt.expectedHeight {
-				if i < len(monitors) && monitors[i].Height != expectedHeight {
-					t.Errorf("Monitor %d: Expected height %d, got %d", i, expectedHeight, monitors[i].Height)
-				}
-			}
-		})
-	}
-}
-
 // TestCommandExists tests the commandExists function
 func TestCommandExists(t *testing.T) {
 	detector := NewMonitorDetector()
@@ -641,7 +550,7 @@ func TestCommandExecution(t *testing.T) {
 	detector := NewMonitorDetector()
 
 	// Test with non-existent commands
-	nonExistentCommands := []string{"hyprctl", "wlr-randr", "xrandr"}
+	nonExistentCommands := []string{"hyprctl", "wlr-randr"}
 
 	// Save original PATH
 	originalPath := os.Getenv("PATH")

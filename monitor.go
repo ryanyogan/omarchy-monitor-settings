@@ -25,7 +25,6 @@ func (md *MonitorDetector) DetectMonitors() ([]Monitor, error) {
 	detectionMethods := []func() ([]Monitor, error){
 		md.detectWithHyprctl,
 		md.detectWithWlrRandr,
-		md.detectWithXrandr,
 		md.getFallbackMonitors, // Always succeeds with demo data
 	}
 
@@ -35,7 +34,7 @@ func (md *MonitorDetector) DetectMonitors() ([]Monitor, error) {
 
 	for i, method := range detectionMethods {
 		if debugMode {
-			methodNames := []string{"hyprctl", "wlr-randr", "xrandr", "fallback"}
+			methodNames := []string{"hyprctl", "wlr-randr", "fallback"}
 			fmt.Printf("DEBUG: Trying method %d: %s\n", i+1, methodNames[i])
 		}
 
@@ -46,7 +45,7 @@ func (md *MonitorDetector) DetectMonitors() ([]Monitor, error) {
 
 		if err == nil && len(monitors) > 0 {
 			if debugMode {
-				fmt.Printf("DEBUG: Successfully detected %d monitors using %s\n", len(monitors), []string{"hyprctl", "wlr-randr", "xrandr", "fallback"}[i])
+				fmt.Printf("DEBUG: Successfully detected %d monitors using %s\n", len(monitors), []string{"hyprctl", "wlr-randr", "fallback"}[i])
 			}
 			return monitors, nil
 		}
@@ -107,21 +106,6 @@ func (md *MonitorDetector) detectWithWlrRandr() ([]Monitor, error) {
 	}
 
 	return md.parseWlrRandrOutput(string(output))
-}
-
-// detectWithXrandr detects monitors using xrandr (X11 display manager - fallback)
-func (md *MonitorDetector) detectWithXrandr() ([]Monitor, error) {
-	if !md.commandExists("xrandr") {
-		return nil, fmt.Errorf("xrandr not found")
-	}
-
-	cmd := exec.Command("xrandr")
-	output, err := cmd.Output()
-	if err != nil {
-		return nil, fmt.Errorf("failed to run xrandr: %w", err)
-	}
-
-	return md.parseXrandrOutput(string(output))
 }
 
 // getFallbackMonitors provides realistic demo monitors for testing
@@ -324,57 +308,6 @@ func (md *MonitorDetector) parseWlrRandrOutput(output string) ([]Monitor, error)
 			monitors[i].IsPrimary = true
 			break
 		}
-	}
-
-	return monitors, nil
-}
-
-// parseXrandrOutput parses the output from xrandr
-func (md *MonitorDetector) parseXrandrOutput(output string) ([]Monitor, error) {
-	var monitors []Monitor
-	lines := strings.Split(output, "\n")
-
-	for _, line := range lines {
-		line = strings.TrimSpace(line)
-
-		// Look for connected monitors: "DP1 connected 1920x1080+1366+0"
-		if strings.Contains(line, " connected") {
-			fields := strings.Fields(line)
-			if len(fields) < 3 {
-				continue
-			}
-
-			monitor := Monitor{
-				Name:     fields[0],
-				Scale:    1.0,
-				IsActive: true,
-			}
-
-			// Parse resolution from "1920x1080+1366+0" format
-			if len(fields) > 2 {
-				resolutionStr := fields[2]
-				re := regexp.MustCompile(`(\d+)x(\d+)(?:\+(\d+)\+(\d+))?`)
-				matches := re.FindStringSubmatch(resolutionStr)
-				if len(matches) > 2 {
-					monitor.Width, _ = strconv.Atoi(matches[1])
-					monitor.Height, _ = strconv.Atoi(matches[2])
-					if len(matches) > 4 {
-						monitor.Position.X, _ = strconv.Atoi(matches[3])
-						monitor.Position.Y, _ = strconv.Atoi(matches[4])
-					}
-				}
-			}
-
-			// Look for refresh rate in subsequent lines
-			monitor.RefreshRate = 60.0 // Default
-
-			monitors = append(monitors, monitor)
-		}
-	}
-
-	// Set the first monitor as primary
-	if len(monitors) > 0 {
-		monitors[0].IsPrimary = true
 	}
 
 	return monitors, nil

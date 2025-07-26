@@ -82,7 +82,7 @@ hyprland-monitor-tui --debug
 The application automatically detects monitors using:
 1. **hyprctl** (Hyprland's native tool)
 2. **wlr-randr** (Wayland fallback)
-3. **xrandr** (X11 fallback)
+# Removed xrandr support
 4. **Demo data** (for testing/development)
 
 ## 📊 Scaling Recommendations
@@ -120,7 +120,7 @@ The interface uses the beautiful Tokyo Night color palette:
 
 - ✅ **Arch Linux + Hyprland** (primary target)
 - ✅ **Any Wayland compositor** (wlr-randr fallback)
-- ✅ **X11 systems** (xrandr fallback)
+# Removed X11/xrandr support
 - ✅ **macOS/Other** (demo mode for UI testing)
 
 ## 🤝 Contributing

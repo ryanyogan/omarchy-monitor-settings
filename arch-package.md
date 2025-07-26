@@ -19,7 +19,7 @@ curl -sSL https://github.com/yourusername/hyprland-monitor-tui/raw/main/install.
 mise use -g go@latest
 
 # Install optional dependencies (recommended)
-sudo pacman -S wlr-randr xorg-xrandr
+sudo pacman -S wlr-randr
 
 # Build the application
 go build -o hyprland-monitor-tui .
@@ -62,7 +62,7 @@ sudo pacman -U hyprland-monitor-tui-1.0.0-1-x86_64.pkg.tar.zst
 
 - **Hyprland Integration**: Native `hyprctl` support
 - **Wayland Support**: Uses `wlr-randr` for fallback detection
-- **X11 Compatibility**: Falls back to `xrandr` when needed
+# Removed X11/xrandr support
 - **Go Runtime**: Built with Go 1.21+ (available in Arch repos)
 - **Dependencies**: All optional deps available in official repos
 
@@ -76,7 +76,7 @@ mise use -g go@latest
 pacman -S hyprland
 
 # Optional but recommended
-pacman -S wlr-randr xorg-xrandr
+pacman -S wlr-randr
 
 # For development
 pacman -S git base-devel
@@ -120,7 +120,7 @@ hyprland-monitor-tui --no-hyprland-check
 # Check monitor detection methods
 hyprctl monitors  # Should work in Hyprland
 wlr-randr         # Should work in any Wayland compositor
-xrandr            # Should work in X11 environments
+# xrandr removed - no longer supported
 
 # Test scaling application (Hyprland only)
 hyprctl keyword monitor eDP-1,preferred,auto,2.0
@@ -138,7 +138,7 @@ hyprctl keyword monitor eDP-1,preferred,auto,2.0
 2. **"No monitors detected"**
    ```bash
    # Install fallback tools
-   sudo pacman -S wlr-randr xorg-xrandr
+   sudo pacman -S wlr-randr
    ```
 
 3. **"Permission denied"**
@@ -155,7 +155,7 @@ hyprctl keyword monitor eDP-1,preferred,auto,2.0
 echo $HYPRLAND_INSTANCE_SIGNATURE
 
 # Check available detection tools
-which hyprctl wlr-randr xrandr
+which hyprctl wlr-randr
 
 # Test monitor detection
 hyprland-monitor-tui --debug --no-hyprland-check
@@ -168,7 +168,7 @@ hyprland-monitor-tui --debug --no-hyprland-check
 - **Architecture**: `x86_64`, `aarch64`
 - **License**: `MIT`
 - **Dependencies**: `hyprland`
-- **Optional Dependencies**: `wlr-randr`, `xorg-xrandr`
+- **Optional Dependencies**: `wlr-randr`
 - **Build Dependencies**: `go`
 
 ## 🗑️ Uninstallation

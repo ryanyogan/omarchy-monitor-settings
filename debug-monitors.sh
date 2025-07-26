@@ -9,7 +9,7 @@ echo "WAYLAND_DISPLAY: ${WAYLAND_DISPLAY:-'(not set)'}"
 echo
 
 echo "2. Available Commands:"
-for cmd in hyprctl wlr-randr xrandr; do
+for cmd in hyprctl wlr-randr; do
     if command -v "$cmd" &> /dev/null; then
         echo "✓ $cmd: $(which $cmd)"
     else
