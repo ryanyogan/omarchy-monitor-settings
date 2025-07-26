@@ -1,4 +1,4 @@
-module omarchy-monitor-settings
+module github.com/ryanyogan/omarchy-monitor-settings
 
 go 1.21
 

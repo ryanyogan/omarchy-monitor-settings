@@ -24,10 +24,20 @@ This tool provides an interactive terminal interface for configuring monitor set
 
 ## Installation
 
+### Quick Install (Recommended)
+
+```bash
+# Install the latest version
+go install github.com/ryanyogan/omarchy-monitor-settings@latest
+
+# Install a specific version
+go install github.com/ryanyogan/omarchy-monitor-settings@v1.1.1
+```
+
 ### From Source
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/ryanyogan/omarchy-monitor-settings.git
 cd omarchy-monitor-settings
 make build
 sudo cp omarchy-monitor-settings /usr/local/bin/
