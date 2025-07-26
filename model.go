@@ -576,8 +576,8 @@ func (m Model) View() string {
 			Render("Initializing stunning TUI...")
 	}
 
-	// Calculate precise dimensions for clean layout with simple header
-	headerHeight := 5                                           // Header with border, padding, and margin
+	// Calculate precise dimensions for clean layout with styled header
+	headerHeight := 7                                           // Header with border, padding, and margin (increased for new styling)
 	footerHeight := 2                                           // Footer spacing
 	contentHeight := m.height - headerHeight - footerHeight - 2 // -2 for margins
 
@@ -628,13 +628,33 @@ func (m Model) View() string {
 }
 
 func (m Model) renderHeader() string {
-	// Ultra simple header to test text visibility
+	// Clean header with border and padding matching footer style
+	// Calculate the same width as footer and dashboard panels
+	availableWidth := m.width - 8                // Account for margins and borders
+	leftWidth := availableWidth * 2 / 5          // 40% for menu
+	rightWidth := availableWidth - leftWidth - 4 // Remaining for monitors
+
+	// Ensure minimum widths
+	if leftWidth < 25 {
+		leftWidth = 25
+	}
+	if rightWidth < 30 {
+		rightWidth = 30
+	}
+
+	// Total header width = left panel + gap + right panel + content margin
+	totalHeaderWidth := leftWidth + 2 + rightWidth + 2 // +2 for content margin (1 on each side)
+
 	return lipgloss.NewStyle().
-		Width(m.width).
+		Width(totalHeaderWidth).
 		Background(colorBackground).
 		Foreground(colorBlue).
 		Bold(true).
 		Align(lipgloss.Center).
+		Padding(1, 2).
+		Margin(0, 2). // Same left margin as footer
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(colorComment).
 		Render("Display Settings")
 }
 
