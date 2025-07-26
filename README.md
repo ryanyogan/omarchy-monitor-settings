@@ -1,136 +1,187 @@
-# 🖥️ Hyprland Monitor TUI
+# Hyprland Monitor TUI
 
-A **stunning** terminal interface for managing Hyprland monitor resolution and scaling, built with Go and styled with the beautiful Tokyo Night theme.
+A terminal-based interface for managing monitor resolution and scaling in Hyprland/Wayland environments.
 
-## ✨ Features
+## Overview
 
-- 🎨 **Beautiful Tokyo Night Theme** - Gorgeous colors and modern styling
-- 🖥️ **Multi-Monitor Support** - Detect and configure multiple displays
-- 📏 **Intelligent Scaling** - Smart recommendations based on resolution
-- 🔧 **Real-time Configuration** - Apply changes instantly to Hyprland
-- 🧪 **Demo Mode** - Test the interface on any platform
-- ⚡ **Fast & Responsive** - Built with Go and Bubbletea
+This tool provides an interactive terminal interface for configuring monitor settings in Hyprland. It automatically detects connected displays and offers intelligent scaling recommendations based on resolution and DPI.
 
-## 🚀 Quick Start (macOS Testing)
+## Features
 
-### Prerequisites
+- Multi-monitor detection and configuration
+- Intelligent scaling recommendations
+- Real-time configuration updates
+- Terminal-adaptive theming
+- Demo mode for testing
+- Comprehensive test coverage
 
-Make sure you have Go installed:
+## Requirements
+
+- Go 1.19 or later
+- For production use: Hyprland with `hyprctl` or `wlr-randr`
+- For development: Any Unix-like system
+
+## Installation
+
+### From Source
+
 ```bash
-brew install go
-```
-
-### Build & Run
-
-1. **Clone or navigate to the project directory**
-2. **Install dependencies:**
-   ```bash
-   go mod tidy
-   ```
-
-3. **Build the application:**
-   ```bash
-   go build -o hyprland-monitor-tui
-   ```
-
-4. **Run in demo mode (perfect for macOS testing):**
-   ```bash
-   ./hyprland-monitor-tui --no-hyprland-check
-   ```
-
-### 🎮 Controls
-
-- **↑/↓ or k/j** - Navigate menu items
-- **Enter/Space** - Select option
-- **h or ?** - Show help screen
-- **Esc** - Return to main menu
-- **q or Ctrl+C** - Quit application
-
-### 🎨 What You'll See
-
-The **AWARD-WINNING** TUI features:
-- 🖥️ **Full terminal usage** - Dynamically resizes and scales to your terminal
-- 🎨 **Stunning Tokyo Night theme** - Extended 20+ color palette 
-- ✨ **Elegant selection indicators** - Beautiful `▶` arrows instead of background highlighting
-- 📱 **Professional cards & sections** - Each screen beautifully organized
-- 🏆 **btop-like design** - Clean, light, minimal, and absolutely gorgeous
-- 🎯 **Smart overflow protection** - Never overflows, always fits perfectly
-- 🌈 **Colorful key hints** - Each control highlighted in vibrant colors
-- 🔥 **Instant responsiveness** - Smooth navigation that feels amazing
-- 📊 **Rich monitor information** - Status badges, scaling recommendations
-- 🧪 **Perfect demo mode** - Beautiful UI testing on any platform
-
-## 🖥️ Production Use (Arch Linux + Hyprland)
-
-### Installation
-```bash
-go build -o hyprland-monitor-tui
+git clone <repository-url>
+cd hyprland-monitor-tui
+make build
 sudo cp hyprland-monitor-tui /usr/local/bin/
 ```
 
-### Usage
+### Dependencies
+
+The application will use available monitor detection tools in order of preference:
+1. `hyprctl` (Hyprland native)
+2. `wlr-randr` (Wayland fallback)
+3. Demo data (development/testing)
+
+## Usage
+
+### Basic Usage
+
 ```bash
-# Normal mode (requires Hyprland)
+# Normal operation (requires Hyprland/Wayland)
 hyprland-monitor-tui
+
+# Demo mode (works on any system)
+hyprland-monitor-tui --no-hyprland-check
 
 # Debug mode
 hyprland-monitor-tui --debug
 ```
 
-## 🔧 Monitor Detection
+### Controls
 
-The application automatically detects monitors using:
-1. **hyprctl** (Hyprland's native tool)
-2. **wlr-randr** (Wayland fallback)
-# Removed xrandr support
-4. **Demo data** (for testing/development)
+- `↑/↓` or `k/j` - Navigate menus
+- `←/→` or `h/l` - Adjust values (manual scaling)
+- `Enter/Space` - Select option
+- `m` - Switch to manual scaling
+- `h` or `?` - Help screen
+- `Esc` - Return to previous screen
+- `q` or `Ctrl+C` - Quit
 
-## 📊 Scaling Recommendations
+## Development
 
-Smart scaling based on resolution:
-- **4K+ displays** (3840x2160+): 2x monitor scaling, 0.8x font scaling
-- **1440p displays** (2560x1440): 1x monitor scaling, 0.9x font scaling  
-- **1080p displays** (1920x1080): 1x monitor scaling, 0.8x font scaling
+### Build System
 
-## 🎨 Tokyo Night Theme
+The project uses a Makefile for development tasks:
 
-The interface uses the beautiful Tokyo Night color palette:
-- Background: `#1a1b26`
-- Surface: `#24283b`
-- Primary: `#7aa2f7`
-- Accent colors: Cyan, Green, Yellow, Orange, Red, Purple
+```bash
+# Run comprehensive quality checks
+make quality-check
 
-## 🛠️ Development
+# Individual checks
+make vet          # Code analysis
+make fmt-check    # Format validation
+make test-race    # Race condition detection
+make staticcheck  # Static analysis
+make build-check  # Compilation verification
+
+# Testing
+make test         # Basic test suite
+make test-verbose # Detailed test output
+make test-coverage # Coverage report
+
+# Development
+make build        # Build binary
+make clean        # Remove artifacts
+make help         # Show all targets
+```
+
+### Quality Assurance
+
+The project maintains high code quality standards:
+
+- Comprehensive test suite with 60+ tests
+- Race condition detection
+- Static analysis with `staticcheck`
+- Code formatting validation
+- Terminal theme adaptation testing
 
 ### Project Structure
+
 ```
-├── main.go      # CLI entry point
-├── model.go     # TUI model & rendering
-├── monitor.go   # Monitor detection & configuration
-├── go.mod       # Dependencies
-└── README.md    # Documentation
+├── main.go           # CLI entry point and configuration
+├── model.go          # TUI model and rendering logic
+├── monitor.go        # Monitor detection and configuration
+├── *_test.go         # Test files
+├── Makefile          # Build automation
+└── README.md         # Documentation
 ```
 
 ### Dependencies
+
 - `github.com/charmbracelet/bubbletea` - TUI framework
-- `github.com/charmbracelet/lipgloss` - Styling and layout
+- `github.com/charmbracelet/lipgloss` - Styling
 - `github.com/spf13/cobra` - CLI framework
+- `github.com/muesli/termenv` - Terminal detection
 
-## 🎯 Supported Platforms
+## Testing
 
-- ✅ **Arch Linux + Hyprland** (primary target)
-- ✅ **Any Wayland compositor** (wlr-randr fallback)
-# Removed X11/xrandr support
-- ✅ **macOS/Other** (demo mode for UI testing)
+### Local Testing
 
-## 🤝 Contributing
+```bash
+# Run all tests
+make test-verbose
 
-This tool is designed for the Arch Linux community and Hyprland users. Contributions welcome!
+# Test with race detection
+make test-race
 
-## 📝 License
+# Demo mode (no Hyprland required)
+./hyprland-monitor-tui --no-hyprland-check
+```
 
-MIT License - Feel free to use and modify as needed.
+### CI/CD Integration
 
----
+```bash
+# Complete quality check (suitable for CI)
+make quality-check
+```
 
-**Built with ❤️ for the Hyprland community** 
+## Configuration
+
+### Scaling Options
+
+The application provides intelligent scaling recommendations:
+
+- **4K+ displays** (3840x2160+): Higher scaling factors
+- **1440p displays** (2560x1440): Moderate scaling
+- **1080p displays** (1920x1080): Minimal scaling
+
+### Manual Configuration
+
+Users can manually adjust:
+- Monitor scale (compositor-level)
+- GTK scale (application-level)
+- Font DPI (text rendering)
+
+## Compatibility
+
+- **Primary**: Arch Linux + Hyprland
+- **Secondary**: Any Wayland compositor with `wlr-randr`
+- **Development**: Any Unix-like system (demo mode)
+
+## Contributing
+
+### Development Workflow
+
+1. Fork the repository
+2. Create a feature branch
+3. Run `make quality-check` before committing
+4. Submit a pull request
+
+### Code Standards
+
+- All code must pass `make quality-check`
+- Tests required for new functionality
+- Follow Go best practices
+- Maintain compatibility with Hyprland
+
+## License
+
+MIT License. See LICENSE file for details.
+
