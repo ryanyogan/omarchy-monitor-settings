@@ -31,7 +31,7 @@ This tool provides an interactive terminal interface for configuring monitor set
 go install github.com/ryanyogan/omarchy-monitor-settings@latest
 
 # Install a specific version
-go install github.com/ryanyogan/omarchy-monitor-settings@v1.1.1
+go install github.com/ryanyogan/omarchy-monitor-settings@v1.1.2
 ```
 
 ### From Source
