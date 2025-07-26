@@ -14,6 +14,7 @@ This tool provides an interactive terminal interface for configuring monitor set
 - Terminal-adaptive theming
 - Demo mode for testing
 - Comprehensive test coverage
+- Git-based versioning system
 
 ## Requirements
 
@@ -64,6 +65,52 @@ omarchy-monitor-settings --debug
 - `Esc` - Return to previous screen
 - `q` or `Ctrl+C` - Quit
 
+## Versioning
+
+The application uses Git-based versioning with build-time variable injection. This is the idiomatic Go approach for version management.
+
+### Version Information
+
+```bash
+# Show current version info
+make version
+
+# Or use the version script
+./scripts/version.sh
+```
+
+### Version Sources
+
+- **Tagged releases**: Uses Git tag (e.g., `v1.1.0`)
+- **Development builds**: Uses commit hash with `-dirty` suffix if uncommitted changes
+- **Fallback**: Uses `dev` if Git is not available
+
+### Creating Releases
+
+```bash
+# Create a new version tag
+./scripts/version.sh tag 1.2.0
+
+# Build with current version
+./scripts/version.sh build
+
+# Or use make
+make build
+```
+
+### Version Output Examples
+
+```bash
+# Tagged release
+omarchy-monitor-settings version v1.1.0
+
+# Development build
+omarchy-monitor-settings version c34ff8c-dirty
+
+# Clean development build
+omarchy-monitor-settings version c34ff8c
+```
+
 ## Development
 
 ### Build System
@@ -89,6 +136,7 @@ make test-coverage # Coverage report
 # Development
 make build        # Build binary
 make clean        # Remove artifacts
+make version      # Show version info
 make help         # Show all targets
 ```
 
@@ -108,6 +156,8 @@ The project maintains high code quality standards:
 ├── main.go           # CLI entry point and configuration
 ├── model.go          # TUI model and rendering logic
 ├── monitor.go        # Monitor detection and configuration
+├── scripts/          # Development scripts
+│   └── version.sh    # Version management script
 ├── *_test.go         # Test files
 ├── Makefile          # Build automation
 └── README.md         # Documentation
