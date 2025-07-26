@@ -1,4 +1,4 @@
-# Hyprland Monitor TUI
+# Omarchy Monitor Settings
 
 A terminal-based interface for managing monitor resolution and scaling in Hyprland/Wayland environments.
 
@@ -27,9 +27,9 @@ This tool provides an interactive terminal interface for configuring monitor set
 
 ```bash
 git clone <repository-url>
-cd hyprland-monitor-tui
+cd omarchy-monitor-settings
 make build
-sudo cp hyprland-monitor-tui /usr/local/bin/
+sudo cp omarchy-monitor-settings /usr/local/bin/
 ```
 
 ### Dependencies
@@ -45,13 +45,13 @@ The application will use available monitor detection tools in order of preferenc
 
 ```bash
 # Normal operation (requires Hyprland/Wayland)
-hyprland-monitor-tui
+omarchy-monitor-settings
 
 # Demo mode (works on any system)
-hyprland-monitor-tui --no-hyprland-check
+omarchy-monitor-settings --no-hyprland-check
 
 # Debug mode
-hyprland-monitor-tui --debug
+omarchy-monitor-settings --debug
 ```
 
 ### Controls
@@ -132,7 +132,7 @@ make test-verbose
 make test-race
 
 # Demo mode (no Hyprland required)
-./hyprland-monitor-tui --no-hyprland-check
+./omarchy-monitor-settings --no-hyprland-check
 ```
 
 ### CI/CD Integration

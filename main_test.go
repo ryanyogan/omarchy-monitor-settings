@@ -17,12 +17,12 @@ func TestMain(t *testing.T) {
 	}{
 		{
 			name:     "with version flag",
-			args:     []string{"hyprland-monitor-tui", "--version"},
+			args:     []string{"omarchy-monitor-settings", "--version"},
 			wantExit: true, // Version should exit
 		},
 		{
 			name:     "with help flag",
-			args:     []string{"hyprland-monitor-tui", "--help"},
+			args:     []string{"omarchy-monitor-settings", "--help"},
 			wantExit: true, // Help should exit
 		},
 	}
@@ -337,7 +337,7 @@ func BenchmarkMain(b *testing.B) {
 	defer func() { os.Args = originalArgs }()
 
 	// Set minimal args for benchmarking
-	os.Args = []string{"hyprland-monitor-tui", "--no-hyprland-check"}
+	os.Args = []string{"omarchy-monitor-settings", "--no-hyprland-check"}
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {

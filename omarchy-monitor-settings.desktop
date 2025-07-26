@@ -1,0 +1,11 @@
+[Desktop Entry]
+Name=Omarchy Monitor Settings
+Comment=Beautiful TUI for managing monitor resolution and scaling
+Exec=omarchy-monitor-settings
+Icon=preferences-desktop-display
+Terminal=true
+Type=Application
+Categories=System;Settings;
+Keywords=monitor;display;scaling;resolution;tui;
+StartupNotify=false
+X-Desktop-File-Install-Version=0.24 

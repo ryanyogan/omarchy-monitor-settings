@@ -1,10 +1,10 @@
 # Maintainer: Your Name <your.email@example.com>
-pkgname=hyprland-monitor-tui
-pkgver=1.0.0
+pkgname=omarchy-monitor-settings
+pkgver=1.1.0
 pkgrel=1
-pkgdesc="A stunning TUI application for managing Hyprland monitor resolution and scaling"
+pkgdesc="A stunning TUI application for managing monitor resolution and scaling"
 arch=('x86_64' 'aarch64')
-url="https://github.com/yourusername/hyprland-monitor-tui"
+url="https://github.com/yourusername/omarchy-monitor-settings"
 license=('MIT')
 depends=()
 optdepends=(

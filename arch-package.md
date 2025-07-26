@@ -6,7 +6,7 @@
 
 ```bash
 # Download and run the installation script
-curl -sSL https://github.com/yourusername/hyprland-monitor-tui/raw/main/install.sh | bash
+curl -sSL https://github.com/yourusername/omarchy-monitor-settings/raw/main/install.sh | bash
 
 # Or if you have the source:
 ./install.sh
@@ -22,11 +22,11 @@ mise use -g go@latest
 sudo pacman -S wlr-randr
 
 # Build the application
-go build -o hyprland-monitor-tui .
+go build -o omarchy-monitor-settings .
 
 # Install system-wide
-sudo install -Dm755 hyprland-monitor-tui /usr/local/bin/hyprland-monitor-tui
-sudo install -Dm644 hyprland-monitor-tui.desktop /usr/share/applications/hyprland-monitor-tui.desktop
+sudo install -Dm755 omarchy-monitor-settings /usr/local/bin/omarchy-monitor-settings
+sudo install -Dm644 omarchy-monitor-settings.desktop /usr/share/applications/omarchy-monitor-settings.desktop
 ```
 
 ## 📦 Package Creation for AUR
@@ -35,12 +35,12 @@ sudo install -Dm644 hyprland-monitor-tui.desktop /usr/share/applications/hyprlan
 
 ```bash
 # Create source archive
-tar -czf hyprland-monitor-tui-1.0.0.tar.gz \
+tar -czf omarchy-monitor-settings-1.1.0.tar.gz \
     main.go model.go monitor.go go.mod go.sum \
-    README.md LICENSE hyprland-monitor-tui.desktop
+    README.md LICENSE omarchy-monitor-settings.desktop
 
 # Generate checksums
-sha256sum hyprland-monitor-tui-1.0.0.tar.gz
+sha256sum omarchy-monitor-settings-1.1.0.tar.gz
 ```
 
 ### Build with makepkg
@@ -53,7 +53,7 @@ makepkg -si
 makepkg
 
 # Install built package
-sudo pacman -U hyprland-monitor-tui-1.0.0-1-x86_64.pkg.tar.zst
+sudo pacman -U omarchy-monitor-settings-1.1.0-1-x86_64.pkg.tar.zst
 ```
 
 ## 🔧 Arch Linux Compatibility
@@ -98,17 +98,17 @@ The application is specifically designed for Hyprland and includes:
 
 ```bash
 # Normal operation with full functionality
-hyprland-monitor-tui
+omarchy-monitor-settings
 
 # Debug mode for troubleshooting
-hyprland-monitor-tui --debug
+omarchy-monitor-settings --debug
 ```
 
 ### Outside Hyprland (Testing)
 
 ```bash
 # Demo mode with sample data
-hyprland-monitor-tui --no-hyprland-check
+omarchy-monitor-settings --no-hyprland-check
 
 # This will show realistic Framework 13 + external monitor data
 # Perfect for UI testing and development
@@ -158,13 +158,13 @@ echo $HYPRLAND_INSTANCE_SIGNATURE
 which hyprctl wlr-randr
 
 # Test monitor detection
-hyprland-monitor-tui --debug --no-hyprland-check
+omarchy-monitor-settings --debug --no-hyprland-check
 ```
 
 ## 🏷️ Package Information
 
-- **Package Name**: `hyprland-monitor-tui`
-- **Version**: `1.0.0`
+- **Package Name**: `omarchy-monitor-settings`
+- **Version**: `1.1.0`
 - **Architecture**: `x86_64`, `aarch64`
 - **License**: `MIT`
 - **Dependencies**: `hyprland`
@@ -178,12 +178,12 @@ hyprland-monitor-tui --debug --no-hyprland-check
 ./uninstall.sh
 
 # If installed via pacman
-sudo pacman -R hyprland-monitor-tui
+sudo pacman -R omarchy-monitor-settings
 
 # Manual removal
-sudo rm /usr/local/bin/hyprland-monitor-tui
-sudo rm /usr/share/applications/hyprland-monitor-tui.desktop
-sudo rm -rf /usr/share/doc/hyprland-monitor-tui/
+sudo rm /usr/local/bin/omarchy-monitor-settings
+sudo rm /usr/share/applications/omarchy-monitor-settings.desktop
+sudo rm -rf /usr/share/doc/omarchy-monitor-settings/
 ```
 
 ---

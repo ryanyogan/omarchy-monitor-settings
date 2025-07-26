@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Hyprland Monitor TUI Installation Script for Arch Linux
+# Omarchy Monitor Settings Installation Script for Arch Linux
 # This script installs the TUI and ensures all dependencies are available
 
 set -e
@@ -17,7 +17,7 @@ NC='\033[0m' # No Color
 # Pretty printing functions
 print_header() {
     echo -e "${BLUE}================================================${NC}"
-    echo -e "${CYAN}🖥️  Hyprland Monitor TUI Installation${NC}"
+    echo -e "${CYAN}🖥️  Omarchy Monitor Settings Installation${NC}"
     echo -e "${BLUE}================================================${NC}"
 }
 
@@ -102,7 +102,7 @@ install_dependencies() {
 
 # Build the application
 build_app() {
-    print_step "Building Hyprland Monitor TUI..."
+    print_step "Building Omarchy Monitor Settings..."
     
     # Ensure we have the source
     if [[ ! -f "main.go" ]]; then
@@ -114,9 +114,12 @@ build_app() {
     export CGO_ENABLED=0
     export GOOS=linux
     
+    # Get version from git tag or use "dev"
+    VERSION=$(git describe --tags --always --dirty 2>/dev/null || echo "dev")
+    
     go build -v \
-        -ldflags "-s -w -X main.version=1.0.0" \
-        -o hyprland-monitor-tui .
+        -ldflags "-s -w -X main.version=${VERSION}" \
+        -o omarchy-monitor-settings .
     
     print_step "Build completed"
 }
@@ -126,36 +129,36 @@ install_app() {
     print_step "Installing application..."
     
     # Install binary
-    sudo install -Dm755 hyprland-monitor-tui /usr/local/bin/hyprland-monitor-tui
+    sudo install -Dm755 omarchy-monitor-settings /usr/local/bin/omarchy-monitor-settings
     
     # Install desktop entry if available
-    if [[ -f "hyprland-monitor-tui.desktop" ]]; then
-        sudo install -Dm644 hyprland-monitor-tui.desktop /usr/share/applications/hyprland-monitor-tui.desktop
+    if [[ -f "omarchy-monitor-settings.desktop" ]]; then
+        sudo install -Dm644 omarchy-monitor-settings.desktop /usr/share/applications/omarchy-monitor-settings.desktop
         print_step "Desktop entry installed"
     fi
     
     # Install documentation
     if [[ -f "README.md" ]]; then
-        sudo install -Dm644 README.md /usr/share/doc/hyprland-monitor-tui/README.md
+        sudo install -Dm644 README.md /usr/share/doc/omarchy-monitor-settings/README.md
         print_step "Documentation installed"
     fi
     
-    print_step "Application installed to /usr/local/bin/hyprland-monitor-tui"
+    print_step "Application installed to /usr/local/bin/omarchy-monitor-settings"
 }
 
 # Test the installation
 test_installation() {
     print_step "Testing installation..."
     
-    if command -v hyprland-monitor-tui &> /dev/null; then
+    if command -v omarchy-monitor-settings &> /dev/null; then
         print_success "Installation successful!"
         echo
         print_info "You can now run the application with:"
-        echo -e "  ${CYAN}hyprland-monitor-tui${NC}"
+        echo -e "  ${CYAN}omarchy-monitor-settings${NC}"
         echo
         if [[ -z "$HYPRLAND_INSTANCE_SIGNATURE" ]]; then
             print_info "Since you're not currently in Hyprland, you can test with:"
-            echo -e "  ${CYAN}hyprland-monitor-tui --no-hyprland-check${NC}"
+            echo -e "  ${CYAN}omarchy-monitor-settings --no-hyprland-check${NC}"
         fi
         echo
         print_info "The application features:"
@@ -179,10 +182,10 @@ create_uninstall() {
     
     cat > uninstall.sh << 'EOF'
 #!/bin/bash
-echo "🗑️  Uninstalling Hyprland Monitor TUI..."
-sudo rm -f /usr/local/bin/hyprland-monitor-tui
-sudo rm -f /usr/share/applications/hyprland-monitor-tui.desktop
-sudo rm -rf /usr/share/doc/hyprland-monitor-tui/
+echo "🗑️  Uninstalling Omarchy Monitor Settings..."
+sudo rm -f /usr/local/bin/omarchy-monitor-settings
+sudo rm -f /usr/share/applications/omarchy-monitor-settings.desktop
+sudo rm -rf /usr/share/doc/omarchy-monitor-settings/
 echo "✓ Uninstallation complete"
 EOF
     

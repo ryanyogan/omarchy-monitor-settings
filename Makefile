@@ -1,5 +1,8 @@
 .PHONY: test test-verbose test-short test-coverage test-race bench build run clean deps fmt vet lint staticcheck quality-check help
 
+# Get version from git tag or use "dev"
+VERSION := $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
+
 # ================================
 # Quality Assurance Targets
 # ================================
@@ -42,8 +45,8 @@ mod-tidy:
 
 build-check:
 	@echo "🔨 Running build check..."
-	go build -o hyprland-monitor-tui .
-	@rm -f hyprland-monitor-tui
+	go build -ldflags "-X main.version=$(VERSION)" -o omarchy-monitor-settings .
+	@rm -f omarchy-monitor-settings
 	@echo "✅ Build check passed"
 
 test-race:
@@ -82,14 +85,19 @@ test-coverage:
 # Build & Run Targets  
 # ================================
 
+version:
+	@echo "Current version: $(VERSION)"
+	@echo "Git tag: $(shell git describe --tags --abbrev=0 2>/dev/null || echo "none")"
+	@echo "Git commit: $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")"
+
 build:
-	go build -o hyprland-monitor-tui .
+	go build -ldflags "-X main.version=$(VERSION)" -o omarchy-monitor-settings .
 
 run:
 	go run .
 
 clean:
-	rm -f hyprland-monitor-tui
+	rm -f omarchy-monitor-settings
 
 # ================================
 # Development Targets
@@ -139,6 +147,7 @@ help:
 	@echo "  build         - Build the application"
 	@echo "  run           - Run the application"
 	@echo "  clean         - Clean build artifacts"
+	@echo "  version       - Show current version info"
 	@echo ""
 	@echo "Development:"
 	@echo "  deps          - Install and tidy dependencies"

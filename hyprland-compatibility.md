@@ -61,19 +61,19 @@ sudo pacman -S hyprland go wlr-randr
 #### 1. **Native Hyprland Environment** (Primary Use Case)
 ```bash
 # Full functionality with real monitor detection
-hyprland-monitor-tui
+omarchy-monitor-settings
 
 # Features available:
 # ✓ Real monitor detection via hyprctl
 # ✓ Live scaling application
 # ✓ Hyprland config integration
-# ✓ Beautiful Tokyo Night UI
+# ✓ Beautiful terminal-adaptive UI
 ```
 
 #### 2. **Hyprland Installed but Not Running**
 ```bash
 # Works with hyprctl fallback detection
-hyprland-monitor-tui --no-hyprland-check
+omarchy-monitor-settings --no-hyprland-check
 
 # Features available:
 # ✓ Demo mode with realistic data
@@ -84,7 +84,7 @@ hyprland-monitor-tui --no-hyprland-check
 #### 3. **Other Wayland Compositors** (Fallback)
 ```bash
 # Uses wlr-randr for detection
-hyprland-monitor-tui --no-hyprland-check
+omarchy-monitor-settings --no-hyprland-check
 
 # Limited functionality but still useful for UI testing
 ```
@@ -115,7 +115,7 @@ Reasoning: 4K+ display: 2x scaling recommended for comfortable viewing
 # Compiled with optimizations for Arch
 export CGO_ENABLED=0
 export GOOS=linux
-go build -ldflags "-s -w" -o hyprland-monitor-tui .
+go build -ldflags "-s -w" -o omarchy-monitor-settings .
 ```
 
 #### System Integration
@@ -135,7 +135,7 @@ echo $HYPRLAND_INSTANCE_SIGNATURE
 hyprctl monitors
 
 # Verify our app can detect monitors
-hyprland-monitor-tui --debug
+omarchy-monitor-settings --debug
 ```
 
 #### Test Monitor Configuration
@@ -145,7 +145,7 @@ hyprctl keyword monitor eDP-1,preferred,auto,1.0
 hyprctl keyword monitor eDP-1,preferred,auto,2.0
 
 # Test with the TUI
-hyprland-monitor-tui
+omarchy-monitor-settings
 # Navigate to "Scaling Options" and test different scales
 ```
 

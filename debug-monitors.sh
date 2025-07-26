@@ -31,6 +31,6 @@ fi
 echo
 
 echo "4. Running TUI with debug:"
-echo "Running: ./hyprland-monitor-tui --debug"
+echo "Running: ./omarchy-monitor-settings --debug"
 echo "================================================"
-./hyprland-monitor-tui --debug 
+./omarchy-monitor-settings --debug 

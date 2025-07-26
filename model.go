@@ -11,29 +11,23 @@ import (
 	"github.com/muesli/termenv"
 )
 
-// Terminal-adaptive color scheme using ANSI colors
-// Automatically adapts to any terminal theme: Tokyo Night, Catppuccin, GitHub Light, etc.
 var (
-	// Background colors - use terminal defaults and ANSI colors
-	colorBackground = lipgloss.Color("")  // Terminal default background
-	colorSurface    = lipgloss.Color("0") // ANSI black (adapts to theme)
-	colorFloat      = lipgloss.Color("8") // ANSI bright black/gray
+	colorBackground = lipgloss.Color("")
+	colorSurface    = lipgloss.Color("0")
+	colorFloat      = lipgloss.Color("8")
 
-	// Foreground colors - use terminal defaults and ANSI colors
-	colorForeground = lipgloss.Color("")  // Terminal default foreground
-	colorComment    = lipgloss.Color("8") // ANSI bright black (dim)
-	colorSubtle     = lipgloss.Color("7") // ANSI white (adapts to theme)
+	colorForeground = lipgloss.Color("")
+	colorComment    = lipgloss.Color("8")
+	colorSubtle     = lipgloss.Color("7")
 
-	// Accent colors - standard ANSI that adapt to any theme
-	colorBlue    = lipgloss.Color("4") // ANSI blue
-	colorCyan    = lipgloss.Color("6") // ANSI cyan
-	colorGreen   = lipgloss.Color("2") // ANSI green
-	colorYellow  = lipgloss.Color("3") // ANSI yellow
-	colorRed     = lipgloss.Color("1") // ANSI red
-	colorMagenta = lipgloss.Color("5") // ANSI magenta
+	colorBlue    = lipgloss.Color("4")
+	colorCyan    = lipgloss.Color("6")
+	colorGreen   = lipgloss.Color("2")
+	colorYellow  = lipgloss.Color("3")
+	colorRed     = lipgloss.Color("1")
+	colorMagenta = lipgloss.Color("5")
 )
 
-// getTerminalThemeInfo returns information about the current terminal theme
 func getTerminalThemeInfo() string {
 	termOutput := termenv.NewOutput(os.Stdout)
 	profile := termOutput.Profile
@@ -61,16 +55,13 @@ func getTerminalThemeInfo() string {
 	return fmt.Sprintf("Terminal Adaptive (%s, %s)", profileName, theme)
 }
 
-// getValidHyprlandScales returns the scales that Hyprland accepts without errors
 func getValidHyprlandScales() []float64 {
 	return []float64{1.0, 1.25, 1.33333, 1.5, 1.66667, 1.75, 2.0, 2.25, 2.5, 3.0}
 }
 
-// findNextValidScale finds the next valid scale in the direction specified
 func findNextValidScale(current float64, up bool) float64 {
 	validScales := getValidHyprlandScales()
 
-	// Find current position
 	currentIndex := -1
 	for i, scale := range validScales {
 		if math.Abs(scale-current) < 0.001 {
@@ -79,7 +70,6 @@ func findNextValidScale(current float64, up bool) float64 {
 		}
 	}
 
-	// If not found, find closest
 	if currentIndex == -1 {
 		minDiff := math.Abs(validScales[0] - current)
 		currentIndex = 0
@@ -92,21 +82,19 @@ func findNextValidScale(current float64, up bool) float64 {
 		}
 	}
 
-	// Move in the specified direction
 	if up {
 		if currentIndex < len(validScales)-1 {
 			return validScales[currentIndex+1]
 		}
-		return validScales[len(validScales)-1] // Stay at max
+		return validScales[len(validScales)-1]
 	} else {
 		if currentIndex > 0 {
 			return validScales[currentIndex-1]
 		}
-		return validScales[0] // Stay at min
+		return validScales[0]
 	}
 }
 
-// AppMode represents different screens/modes in the TUI
 type AppMode int
 
 const (
@@ -119,7 +107,6 @@ const (
 	ModeConfirmation
 )
 
-// ConfirmationAction represents what action is pending confirmation
 type ConfirmationAction int
 
 const (
@@ -128,7 +115,6 @@ const (
 	ConfirmManualScaling
 )
 
-// Monitor represents a detected monitor
 type Monitor struct {
 	Name        string
 	Width       int
@@ -146,42 +132,33 @@ type Position struct {
 	X, Y int
 }
 
-// Model is the main bubbletea model
 type Model struct {
-	// App state
 	mode   AppMode
 	width  int
 	height int
 	ready  bool
 
-	// Services (injected dependencies)
 	services *AppServices
 
-	// Monitor data
 	monitors        []Monitor
 	selectedMonitor int
 	isDemoMode      bool
 
-	// Scaling data
 	scalingOptions     []ScalingOption
 	selectedScalingOpt int
 
-	// Manual scaling controls
 	manualMonitorScale    float64
 	manualGTKScale        int
 	manualFontDPI         int
-	selectedManualControl int // 0=Monitor Scale, 1=GTK Scale, 2=Font DPI
+	selectedManualControl int
 
-	// Confirmation state
 	confirmationAction   ConfirmationAction
 	pendingScalingOption ScalingOption
 	pendingMonitor       Monitor
 
-	// UI state
 	selectedOption int
 	menuItems      []string
 
-	// Styles
 	headerStyle     lipgloss.Style
 	footerStyle     lipgloss.Style
 	titleStyle      lipgloss.Style
@@ -192,9 +169,7 @@ type Model struct {
 	successStyle    lipgloss.Style
 }
 
-// NewModel creates and initializes a new Model (legacy function for backward compatibility)
 func NewModel() Model {
-	// Create default services for backward compatibility
 	config := &AppConfig{
 		NoHyprlandCheck: noHyprlandCheck,
 		DebugMode:       debugMode,
@@ -205,7 +180,6 @@ func NewModel() Model {
 	return NewModelWithServices(services)
 }
 
-// NewModelWithServices creates and initializes a new Model with injected services
 func NewModelWithServices(services *AppServices) Model {
 	m := Model{
 		mode:           ModeDashboard,
@@ -219,23 +193,19 @@ func NewModelWithServices(services *AppServices) Model {
 			"Help",
 			"Exit",
 		},
-		isDemoMode: true, // Default to demo mode for testing
+		isDemoMode: true,
 		services:   services,
 
-		// Initialize manual scaling defaults
 		manualMonitorScale:    1.0,
 		manualGTKScale:        1,
 		manualFontDPI:         96,
 		selectedManualControl: 0,
 	}
 
-	// Initialize styles with Tokyo Night theme
 	m.initStyles()
 
-	// Load monitors using detection or demo data
 	m.loadMonitors()
 
-	// Load intelligent scaling options for the first monitor
 	if len(m.monitors) > 0 {
 		m.scalingOptions = services.ScalingManager.GetIntelligentScalingOptions(m.monitors[0])
 	}
@@ -244,7 +214,6 @@ func NewModelWithServices(services *AppServices) Model {
 }
 
 func (m *Model) initStyles() {
-	// Header style - cleaner btop-like header
 	m.headerStyle = lipgloss.NewStyle().
 		Background(colorSurface).
 		Foreground(colorForeground).
@@ -253,45 +222,37 @@ func (m *Model) initStyles() {
 		Border(lipgloss.RoundedBorder()).
 		BorderForeground(colorBlue)
 
-	// Footer style
 	m.footerStyle = lipgloss.NewStyle().
 		Background(colorSurface).
 		Foreground(colorComment).
 		Padding(0, 1)
 
-	// Title style
 	m.titleStyle = lipgloss.NewStyle().
 		Foreground(colorBlue).
 		Bold(true).
 		Underline(true)
 
-		// Selected menu item style - no background, just text styling
 	m.selectedStyle = lipgloss.NewStyle().
 		Foreground(colorBlue).
 		Bold(true)
 
-	// Unselected menu item style
 	m.unselectedStyle = lipgloss.NewStyle().
 		Foreground(colorForeground)
 
-	// Help text style
 	m.helpStyle = lipgloss.NewStyle().
 		Foreground(colorComment).
 		Italic(true)
 
-	// Error style
 	m.errorStyle = lipgloss.NewStyle().
 		Foreground(colorRed).
 		Bold(true)
 
-	// Success style
 	m.successStyle = lipgloss.NewStyle().
 		Foreground(colorGreen).
 		Bold(true)
 }
 
 func (m *Model) loadMonitors() {
-	// Use injected monitor detector
 	monitors, err := m.services.MonitorDetector.DetectMonitors()
 
 	if m.services.Config.DebugMode {
@@ -299,12 +260,11 @@ func (m *Model) loadMonitors() {
 	}
 
 	if err != nil {
-		// Fallback to demo monitors
 		if m.services.Config.DebugMode {
 			fmt.Printf("DEBUG: Setting demo mode due to detection error\n")
 		}
 		m.isDemoMode = true
-		// Get fallback monitors from the detector
+
 		if detector, ok := m.services.MonitorDetector.(*MonitorDetector); ok {
 			monitors, _ = detector.getFallbackMonitors()
 		}
@@ -315,7 +275,6 @@ func (m *Model) loadMonitors() {
 		m.isDemoMode = false
 	}
 
-	// Override demo mode if force-live flag is set
 	if m.services.Config.ForceLiveMode {
 		if m.services.Config.DebugMode {
 			fmt.Printf("DEBUG: Force-live mode enabled, overriding demo mode\n")
@@ -330,12 +289,10 @@ func (m *Model) loadMonitors() {
 	m.monitors = monitors
 }
 
-// Init initializes the model
 func (m Model) Init() tea.Cmd {
 	return tea.EnterAltScreen
 }
 
-// Update handles messages and updates the model
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
@@ -366,10 +323,9 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		case ModeMonitorSelection:
 			if m.selectedMonitor > 0 {
 				m.selectedMonitor--
-				// Update scaling options when monitor changes
 				if len(m.monitors) > 0 && m.selectedMonitor < len(m.monitors) {
 					m.scalingOptions = m.services.ScalingManager.GetIntelligentScalingOptions(m.monitors[m.selectedMonitor])
-					m.selectedScalingOpt = 0 // Reset to first option
+					m.selectedScalingOpt = 0
 				}
 			}
 		case ModeScalingOptions:
@@ -377,7 +333,6 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				m.selectedScalingOpt--
 			}
 		case ModeManualScaling:
-			// Navigate to previous control
 			if m.selectedManualControl > 0 {
 				m.selectedManualControl--
 			}
@@ -392,10 +347,9 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		case ModeMonitorSelection:
 			if m.selectedMonitor < len(m.monitors)-1 {
 				m.selectedMonitor++
-				// Update scaling options when monitor changes
 				if len(m.monitors) > 0 && m.selectedMonitor < len(m.monitors) {
 					m.scalingOptions = m.services.ScalingManager.GetIntelligentScalingOptions(m.monitors[m.selectedMonitor])
-					m.selectedScalingOpt = 0 // Reset to first option
+					m.selectedScalingOpt = 0
 				}
 			}
 		case ModeScalingOptions:
@@ -403,7 +357,6 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				m.selectedScalingOpt++
 			}
 		case ModeManualScaling:
-			// Navigate to next control
 			if m.selectedManualControl < 2 {
 				m.selectedManualControl++
 			}
@@ -411,15 +364,14 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	case "left":
 		if m.mode == ModeManualScaling {
-			// Decrease the selected manual control value
 			switch m.selectedManualControl {
-			case 0: // Monitor Scale - use Hyprland-compatible scales only
+			case 0:
 				m.manualMonitorScale = findNextValidScale(m.manualMonitorScale, false)
-			case 1: // GTK Scale
+			case 1:
 				if m.manualGTKScale > 1 {
 					m.manualGTKScale--
 				}
-			case 2: // Font DPI
+			case 2:
 				if m.manualFontDPI > 72 {
 					m.manualFontDPI -= 12
 					if m.manualFontDPI < 72 {
@@ -431,15 +383,14 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	case "right":
 		if m.mode == ModeManualScaling {
-			// Increase the selected manual control value
 			switch m.selectedManualControl {
-			case 0: // Monitor Scale - use Hyprland-compatible scales only
+			case 0:
 				m.manualMonitorScale = findNextValidScale(m.manualMonitorScale, true)
-			case 1: // GTK Scale
+			case 1:
 				if m.manualGTKScale < 3 {
 					m.manualGTKScale++
 				}
-			case 2: // Font DPI
+			case 2:
 				if m.manualFontDPI < 288 {
 					m.manualFontDPI += 12
 					if m.manualFontDPI > 288 {
@@ -451,12 +402,10 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	case "enter", " ":
 		if m.mode == ModeMonitorSelection {
-			// Monitor selected - return to dashboard
 			m.mode = ModeDashboard
 			m.selectedOption = 0
 			return m, nil
 		} else if m.mode == ModeScalingOptions && len(m.scalingOptions) > 0 && m.selectedScalingOpt < len(m.scalingOptions) {
-			// Show confirmation for smart scaling
 			selectedOption := m.scalingOptions[m.selectedScalingOpt]
 			if len(m.monitors) > 0 && m.selectedMonitor < len(m.monitors) {
 				m.confirmationAction = ConfirmSmartScaling
@@ -466,11 +415,9 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			}
 			return m, nil
 		} else if m.mode == ModeManualScaling {
-			// Show confirmation for manual scaling
 			if len(m.monitors) > 0 && m.selectedMonitor < len(m.monitors) {
 				m.confirmationAction = ConfirmManualScaling
 				m.pendingMonitor = m.monitors[m.selectedMonitor]
-				// Create a temporary scaling option for manual settings
 				m.pendingScalingOption = ScalingOption{
 					MonitorScale: m.manualMonitorScale,
 					GTKScale:     m.manualGTKScale,
@@ -482,7 +429,6 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			}
 			return m, nil
 		} else if m.mode == ModeConfirmation {
-			// Apply the confirmed scaling using injected config manager
 			switch m.confirmationAction {
 			case ConfirmSmartScaling:
 				m.services.ConfigManager.ApplyCompleteScalingOption(m.pendingMonitor, m.pendingScalingOption)
@@ -491,7 +437,6 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				m.services.ConfigManager.ApplyGTKScale(m.manualGTKScale)
 				m.services.ConfigManager.ApplyFontDPI(m.manualFontDPI)
 			}
-			// Reset confirmation state and return to dashboard
 			m.confirmationAction = ConfirmNone
 			m.mode = ModeDashboard
 			m.selectedOption = 0
@@ -512,9 +457,8 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		switch m.mode {
 		case ModeManualScaling:
 			m.mode = ModeDashboard
-			m.selectedOption = 0 // Reset to first option
+			m.selectedOption = 0
 		case ModeConfirmation:
-			// Cancel confirmation and return to previous mode
 			switch m.confirmationAction {
 			case ConfirmSmartScaling:
 				m.mode = ModeScalingOptions
@@ -526,7 +470,6 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.confirmationAction = ConfirmNone
 		default:
 			m.mode = ModeDashboard
-			// Reset selection when returning to dashboard
 			m.selectedOption = 0
 		}
 	}
@@ -536,28 +479,26 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 func (m Model) handleSelection() (tea.Model, tea.Cmd) {
 	switch m.selectedOption {
-	case 0: // Dashboard
+	case 0:
 		m.mode = ModeDashboard
-	case 1: // Monitor Selection
+	case 1:
 		m.mode = ModeMonitorSelection
-	case 2: // Smart Scaling
+	case 2:
 		m.mode = ModeScalingOptions
-	case 3: // Manual Scaling
+	case 3:
 		m.mode = ModeManualScaling
-	case 4: // Settings
+	case 4:
 		m.mode = ModeSettings
-	case 5: // Help
+	case 5:
 		m.mode = ModeHelp
-	case 6: // Exit
+	case 6:
 		return m, tea.Quit
 	}
 
 	return m, nil
 }
 
-// View renders the award-winning beautiful TUI
 func (m Model) View() string {
-	// Ensure minimum dimensions
 	if m.width < 80 || m.height < 20 {
 		return lipgloss.NewStyle().
 			Width(m.width).
@@ -576,17 +517,14 @@ func (m Model) View() string {
 			Render("Initializing stunning TUI...")
 	}
 
-	// Calculate precise dimensions for clean layout with styled header
-	headerHeight := 7                                           // Header with border, padding, and margin (increased for new styling)
-	footerHeight := 2                                           // Footer spacing
-	contentHeight := m.height - headerHeight - footerHeight - 2 // -2 for margins
+	headerHeight := 7
+	footerHeight := 2
+	contentHeight := m.height - headerHeight - footerHeight - 2
 
-	// Ensure content doesn't overflow
 	if contentHeight < 10 {
 		contentHeight = 10
 	}
 
-	// Build the view based on current mode
 	var content string
 
 	switch m.mode {
@@ -608,15 +546,13 @@ func (m Model) View() string {
 		content = m.renderDashboard(contentHeight)
 	}
 
-	// Create clean layout with simple header
 	header := m.renderHeader()
 	footer := m.renderFooter()
 
-	// Professional content container with perfect proportions
 	styledContent := lipgloss.NewStyle().
-		Width(m.width-4). // Leave margin on sides
+		Width(m.width-4).
 		Height(contentHeight).
-		Margin(1, 2). // Perfect margins
+		Margin(1, 2).
 		Render(content)
 
 	return lipgloss.JoinVertical(
@@ -628,13 +564,10 @@ func (m Model) View() string {
 }
 
 func (m Model) renderHeader() string {
-	// Clean header with border and padding matching footer style
-	// Calculate the same width as footer and dashboard panels
-	availableWidth := m.width - 8                // Account for margins and borders
-	leftWidth := availableWidth * 2 / 5          // 40% for menu
-	rightWidth := availableWidth - leftWidth - 4 // Remaining for monitors
+	availableWidth := m.width - 8
+	leftWidth := availableWidth * 2 / 5
+	rightWidth := availableWidth - leftWidth - 4
 
-	// Ensure minimum widths
 	if leftWidth < 25 {
 		leftWidth = 25
 	}
@@ -642,8 +575,7 @@ func (m Model) renderHeader() string {
 		rightWidth = 30
 	}
 
-	// Total header width = left panel + gap + right panel + content margin
-	totalHeaderWidth := leftWidth + 2 + rightWidth + 2 // +2 for content margin (1 on each side)
+	totalHeaderWidth := leftWidth + 2 + rightWidth + 2
 
 	return lipgloss.NewStyle().
 		Width(totalHeaderWidth).
@@ -652,14 +584,13 @@ func (m Model) renderHeader() string {
 		Bold(true).
 		Align(lipgloss.Center).
 		Padding(1, 2).
-		Margin(0, 2). // Same left margin as footer
+		Margin(0, 2).
 		Border(lipgloss.RoundedBorder()).
 		BorderForeground(colorComment).
 		Render("Display Settings")
 }
 
 func (m Model) renderFooter() string {
-	// Award-winning footer with elegant key hints
 	keyStyle := lipgloss.NewStyle().
 		Background(colorBackground).
 		Foreground(colorBlue).
@@ -680,12 +611,10 @@ func (m Model) renderFooter() string {
 
 	helpText := strings.Join(controls, "  ")
 
-	// Calculate the total width of the dashboard content (both panels + gap)
-	availableWidth := m.width - 8                // Account for margins and borders
-	leftWidth := availableWidth * 2 / 5          // 40% for menu
-	rightWidth := availableWidth - leftWidth - 4 // Remaining for monitors
+	availableWidth := m.width - 8
+	leftWidth := availableWidth * 2 / 5
+	rightWidth := availableWidth - leftWidth - 4
 
-	// Ensure minimum widths
 	if leftWidth < 25 {
 		leftWidth = 25
 	}
@@ -693,29 +622,24 @@ func (m Model) renderFooter() string {
 		rightWidth = 30
 	}
 
-	// Total footer width = left panel + gap + right panel
-	// Need to account for the fact that panels are joined horizontally with a 2-space gap
-	// Plus account for the content margin (2 spaces on each side)
-	totalFooterWidth := leftWidth + 2 + rightWidth + 2 // +2 for content margin (1 on each side)
+	totalFooterWidth := leftWidth + 2 + rightWidth + 2
 
 	return lipgloss.NewStyle().
 		Width(totalFooterWidth).
 		Background(colorBackground).
 		Align(lipgloss.Center).
 		Padding(1, 2).
-		Margin(0, 2). // Reduced margin to align with panel borders, not internal text
+		Margin(0, 2).
 		Border(lipgloss.RoundedBorder()).
 		BorderForeground(colorComment).
 		Render(helpText)
 }
 
 func (m Model) renderDashboard(contentHeight int) string {
-	// Award-winning responsive layout with perfect proportions
-	availableWidth := m.width - 8                // Account for margins and borders
-	leftWidth := availableWidth * 2 / 5          // 40% for menu
-	rightWidth := availableWidth - leftWidth - 4 // Remaining for monitors
+	availableWidth := m.width - 8
+	leftWidth := availableWidth * 2 / 5
+	rightWidth := availableWidth - leftWidth - 4
 
-	// Ensure minimum widths
 	if leftWidth < 25 {
 		leftWidth = 25
 	}
@@ -726,7 +650,6 @@ func (m Model) renderDashboard(contentHeight int) string {
 	var leftPanel []string
 	var rightPanel []string
 
-	// Elegant menu panel
 	leftPanel = append(leftPanel,
 		lipgloss.NewStyle().
 			Foreground(colorBlue).
@@ -742,7 +665,6 @@ func (m Model) renderDashboard(contentHeight int) string {
 		var line string
 
 		if i == m.selectedOption {
-			// Beautiful selection indicator
 			selector := lipgloss.NewStyle().
 				Foreground(color).
 				Bold(true).
@@ -759,10 +681,9 @@ func (m Model) renderDashboard(contentHeight int) string {
 			line = fmt.Sprintf("  %s", text)
 		}
 		leftPanel = append(leftPanel, line)
-		leftPanel = append(leftPanel, "") // Breathing room
+		leftPanel = append(leftPanel, "")
 	}
 
-	// Elegant monitor panel
 	rightPanel = append(rightPanel,
 		lipgloss.NewStyle().
 			Foreground(colorCyan).
@@ -775,12 +696,11 @@ func (m Model) renderDashboard(contentHeight int) string {
 
 	for i, monitor := range m.monitors {
 		if i >= len(monitorColors) {
-			break // Prevent overflow
+			break
 		}
 
 		color := monitorColors[i]
 
-		// Elegant status indicators
 		var statusIcon string
 		var statusStyle lipgloss.Style
 		if monitor.IsActive {
@@ -796,13 +716,11 @@ func (m Model) renderDashboard(contentHeight int) string {
 			statusStyle = lipgloss.NewStyle().Foreground(colorComment)
 		}
 
-		// Beautiful monitor card
 		header := fmt.Sprintf("%s %s",
 			statusStyle.Render(statusIcon),
 			lipgloss.NewStyle().Foreground(color).Bold(true).Render(monitor.Name),
 		)
 
-		// Add indicator if this is the currently selected monitor for changes
 		if i == m.selectedMonitor {
 			selectedIndicator := lipgloss.NewStyle().
 				Foreground(colorYellow).
@@ -817,7 +735,6 @@ func (m Model) renderDashboard(contentHeight int) string {
 			lipgloss.NewStyle().Foreground(colorComment).Render(fmt.Sprintf("  Scale: %.1fx", monitor.Scale)),
 		}
 
-		// Add extra info if this is the selected monitor
 		if i == m.selectedMonitor {
 			details = append(details, lipgloss.NewStyle().
 				Foreground(colorYellow).
@@ -827,7 +744,7 @@ func (m Model) renderDashboard(contentHeight int) string {
 
 		rightPanel = append(rightPanel, header)
 		rightPanel = append(rightPanel, details...)
-		rightPanel = append(rightPanel, "") // Card spacing
+		rightPanel = append(rightPanel, "")
 	}
 
 	if m.isDemoMode {
@@ -838,7 +755,6 @@ func (m Model) renderDashboard(contentHeight int) string {
 		rightPanel = append(rightPanel, demoNotice)
 	}
 
-	// Award-winning panel styling
 	leftContent := lipgloss.NewStyle().
 		Width(leftWidth).
 		Height(contentHeight - 2).
@@ -860,7 +776,7 @@ func (m Model) renderDashboard(contentHeight int) string {
 	return lipgloss.JoinHorizontal(
 		lipgloss.Top,
 		leftContent,
-		lipgloss.NewStyle().Width(2).Render(""), // Perfect spacing
+		lipgloss.NewStyle().Width(2).Render(""),
 		rightContent,
 	)
 }
@@ -868,7 +784,6 @@ func (m Model) renderDashboard(contentHeight int) string {
 func (m Model) renderMonitorSelection(contentHeight int) string {
 	var content []string
 
-	// Award-winning monitor selection screen
 	title := lipgloss.NewStyle().
 		Foreground(colorBlue).
 		Bold(true).
@@ -891,7 +806,6 @@ func (m Model) renderMonitorSelection(contentHeight int) string {
 
 		color := monitorColors[i]
 
-		// Status styling
 		var statusText string
 		var statusStyle lipgloss.Style
 		if monitor.IsActive {

@@ -13,7 +13,7 @@ var (
 	noHyprlandCheck bool
 	debugMode       bool
 	forceLiveMode   bool
-	version         = "1.0.0"
+	version         = "dev"
 )
 
 // AppConfig holds application configuration
@@ -62,8 +62,8 @@ func NewAppServices(config *AppConfig) *AppServices {
 
 func main() {
 	rootCmd := &cobra.Command{
-		Use:     "hyprland-monitor-tui",
-		Short:   "A stunning TUI for managing Hyprland monitor resolution and scaling",
+		Use:     "omarchy-monitor-settings",
+		Short:   "A stunning TUI for managing monitor resolution and scaling",
 		Long:    "A beautiful terminal interface for detecting and configuring monitor resolution, scaling, and font settings in Hyprland/Wayland environments.",
 		Version: version,
 		Run: func(cmd *cobra.Command, args []string) {

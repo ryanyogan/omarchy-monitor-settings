@@ -1,4 +1,4 @@
-module hyprland-monitor-tui
+module omarchy-monitor-settings
 
 go 1.21
 
