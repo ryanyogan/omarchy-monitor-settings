@@ -576,9 +576,9 @@ func (m Model) View() string {
 			Render("Initializing stunning TUI...")
 	}
 
-	// Calculate precise dimensions for award-winning layout
-	headerHeight := 4                                           // Slightly more breathing room
-	footerHeight := 2                                           // Better footer spacing
+	// Calculate precise dimensions for clean layout with simple header
+	headerHeight := 5                                           // Header with border, padding, and margin
+	footerHeight := 2                                           // Footer spacing
 	contentHeight := m.height - headerHeight - footerHeight - 2 // -2 for margins
 
 	// Ensure content doesn't overflow
@@ -608,7 +608,7 @@ func (m Model) View() string {
 		content = m.renderDashboard(contentHeight)
 	}
 
-	// Create award-winning layout with perfect spacing
+	// Create clean layout with simple header
 	header := m.renderHeader()
 	footer := m.renderFooter()
 
@@ -628,61 +628,20 @@ func (m Model) View() string {
 }
 
 func (m Model) renderHeader() string {
-	// Award-winning header design with perfect typography
-	title := lipgloss.NewStyle().
+	// Ultra simple header to test text visibility
+	return lipgloss.NewStyle().
+		Width(m.width).
+		Background(colorBackground).
 		Foreground(colorBlue).
 		Bold(true).
-		Render("Hyprland Monitor Manager")
-
-	var statusBadge string
-	if m.isDemoMode {
-		statusBadge = lipgloss.NewStyle().
-			Background(colorYellow).
-			Foreground(colorBackground).
-			Bold(true).
-			Padding(0, 1).
-			Render(" DEMO ")
-	} else {
-		statusBadge = lipgloss.NewStyle().
-			Background(colorGreen).
-			Foreground(colorBackground).
-			Bold(true).
-			Padding(0, 1).
-			Render(" LIVE ")
-	}
-
-	// Professional header layout
-	headerLeft := lipgloss.JoinVertical(lipgloss.Left,
-		title,
-		lipgloss.NewStyle().Foreground(colorSubtle).Render("Beautiful Display Configuration"),
-	)
-
-	headerRight := lipgloss.NewStyle().
-		Align(lipgloss.Right).
-		Render(statusBadge)
-
-	headerContent := lipgloss.JoinHorizontal(
-		lipgloss.Top,
-		headerLeft,
-		lipgloss.NewStyle().Width(m.width-40).Render(""), // Spacer
-		headerRight,
-	)
-
-	return lipgloss.NewStyle().
-		Width(m.width-2).
-		Background(colorSurface).
-		Foreground(colorForeground).
-		Padding(1, 2).
-		Margin(0, 1).
-		Border(lipgloss.RoundedBorder()).
-		BorderForeground(colorBlue).
-		Render(headerContent)
+		Align(lipgloss.Center).
+		Render("Display Settings")
 }
 
 func (m Model) renderFooter() string {
 	// Award-winning footer with elegant key hints
 	keyStyle := lipgloss.NewStyle().
-		Background(colorFloat).
+		Background(colorBackground).
 		Foreground(colorBlue).
 		Bold(true).
 		Padding(0, 1).
@@ -701,12 +660,30 @@ func (m Model) renderFooter() string {
 
 	helpText := strings.Join(controls, "  ")
 
+	// Calculate the total width of the dashboard content (both panels + gap)
+	availableWidth := m.width - 8                // Account for margins and borders
+	leftWidth := availableWidth * 2 / 5          // 40% for menu
+	rightWidth := availableWidth - leftWidth - 4 // Remaining for monitors
+
+	// Ensure minimum widths
+	if leftWidth < 25 {
+		leftWidth = 25
+	}
+	if rightWidth < 30 {
+		rightWidth = 30
+	}
+
+	// Total footer width = left panel + gap + right panel
+	// Need to account for the fact that panels are joined horizontally with a 2-space gap
+	// Plus account for the content margin (2 spaces on each side)
+	totalFooterWidth := leftWidth + 2 + rightWidth + 2 // +2 for content margin (1 on each side)
+
 	return lipgloss.NewStyle().
-		Width(m.width-2).
-		Background(colorSubtle).
+		Width(totalFooterWidth).
+		Background(colorBackground).
 		Align(lipgloss.Center).
 		Padding(1, 2).
-		Margin(0, 1).
+		Margin(0, 2). // Reduced margin to align with panel borders, not internal text
 		Border(lipgloss.RoundedBorder()).
 		BorderForeground(colorComment).
 		Render(helpText)
@@ -846,7 +823,7 @@ func (m Model) renderDashboard(contentHeight int) string {
 		Width(leftWidth).
 		Height(contentHeight - 2).
 		Padding(2).
-		Background(colorFloat).
+		Background(colorBackground).
 		Border(lipgloss.RoundedBorder()).
 		BorderForeground(colorBlue).
 		Render(strings.Join(leftPanel, "\n"))
@@ -855,7 +832,7 @@ func (m Model) renderDashboard(contentHeight int) string {
 		Width(rightWidth).
 		Height(contentHeight - 2).
 		Padding(2).
-		Background(colorFloat).
+		Background(colorBackground).
 		Border(lipgloss.RoundedBorder()).
 		BorderForeground(colorCyan).
 		Render(strings.Join(rightPanel, "\n"))
@@ -961,7 +938,7 @@ func (m Model) renderMonitorSelection(contentHeight int) string {
 		Width(m.width - 8).
 		Height(contentHeight - 2).
 		Padding(2).
-		Background(colorFloat).
+		Background(colorBackground).
 		Border(lipgloss.RoundedBorder()).
 		BorderForeground(colorBlue).
 		Render(strings.Join(content, "\n"))
@@ -1089,7 +1066,7 @@ func (m Model) renderScalingOptions(contentHeight int) string {
 		Width(m.width - 8).
 		Height(contentHeight - 2).
 		Padding(2).
-		Background(colorFloat).
+		Background(colorBackground).
 		Border(lipgloss.RoundedBorder()).
 		BorderForeground(colorGreen).
 		Render(strings.Join(content, "\n"))
@@ -1116,7 +1093,7 @@ func (m Model) renderManualScaling(contentHeight int) string {
 			Width(m.width - 8).
 			Height(contentHeight - 2).
 			Padding(2).
-			Background(colorFloat).
+			Background(colorBackground).
 			Border(lipgloss.RoundedBorder()).
 			BorderForeground(colorMagenta).
 			Render(strings.Join(content, "\n"))
@@ -1130,7 +1107,7 @@ func (m Model) renderManualScaling(contentHeight int) string {
 			Width(m.width - 8).
 			Height(contentHeight - 2).
 			Padding(2).
-			Background(colorFloat).
+			Background(colorBackground).
 			Border(lipgloss.RoundedBorder()).
 			BorderForeground(colorMagenta).
 			Render(strings.Join(content, "\n"))
@@ -1253,7 +1230,7 @@ func (m Model) renderManualScaling(contentHeight int) string {
 		Width(m.width - 8).
 		Height(contentHeight - 2).
 		Padding(2).
-		Background(colorFloat).
+		Background(colorBackground).
 		Border(lipgloss.RoundedBorder()).
 		BorderForeground(colorMagenta).
 		Render(strings.Join(content, "\n"))
@@ -1349,7 +1326,7 @@ func (m Model) renderSettings(contentHeight int) string {
 		Width(m.width - 8).
 		Height(contentHeight - 2).
 		Padding(2).
-		Background(colorFloat).
+		Background(colorBackground).
 		Border(lipgloss.RoundedBorder()).
 		BorderForeground(colorMagenta).
 		Render(strings.Join(content, "\n"))
@@ -1463,7 +1440,7 @@ func (m Model) renderConfirmation(contentHeight int) string {
 		Width(m.width - 8).
 		Height(contentHeight - 2).
 		Padding(2).
-		Background(colorFloat).
+		Background(colorBackground).
 		Border(lipgloss.RoundedBorder()).
 		BorderForeground(colorYellow).
 		Render(strings.Join(content, "\n"))
@@ -1578,7 +1555,7 @@ func (m Model) renderHelp(contentHeight int) string {
 		Width(m.width - 8).
 		Height(contentHeight - 2).
 		Padding(2).
-		Background(colorFloat).
+		Background(colorBackground).
 		Border(lipgloss.RoundedBorder()).
 		BorderForeground(colorYellow).
 		Render(strings.Join(content, "\n"))

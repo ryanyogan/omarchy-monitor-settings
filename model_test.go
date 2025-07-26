@@ -482,7 +482,7 @@ func TestModelView(t *testing.T) {
 			height:   24,
 			ready:    true,
 			mode:     ModeDashboard,
-			expected: "Hyprland Monitor Manager",
+			expected: "Display Settings",
 		},
 		{
 			name:     "help mode",
