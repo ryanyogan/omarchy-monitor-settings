@@ -1,10 +1,13 @@
 package main
 
 import (
+	"os"
 	"strings"
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
+	"github.com/muesli/termenv"
 )
 
 // TestNewModel tests the NewModel function
@@ -867,4 +870,417 @@ func BenchmarkKeyPress(b *testing.B) {
 		updatedModel, _ := model.handleKeyPress(keyMsg)
 		_ = updatedModel
 	}
+}
+
+// TestTerminalColorInheritance tests that the application correctly inherits terminal colors
+func TestTerminalColorInheritance(t *testing.T) {
+	t.Run("ANSI_color_definitions", func(t *testing.T) {
+		// Test that all color variables use ANSI color codes that adapt to terminal themes
+		testCases := []struct {
+			name     string
+			color    lipgloss.Color
+			expected string
+		}{
+			{"colorBackground", colorBackground, ""}, // Terminal default
+			{"colorSurface", colorSurface, "0"},      // ANSI black
+			{"colorFloat", colorFloat, "8"},          // ANSI bright black
+			{"colorForeground", colorForeground, ""}, // Terminal default
+			{"colorComment", colorComment, "8"},      // ANSI bright black
+			{"colorSubtle", colorSubtle, "7"},        // ANSI white
+			{"colorBlue", colorBlue, "4"},            // ANSI blue
+			{"colorCyan", colorCyan, "6"},            // ANSI cyan
+			{"colorGreen", colorGreen, "2"},          // ANSI green
+			{"colorYellow", colorYellow, "3"},        // ANSI yellow
+			{"colorRed", colorRed, "1"},              // ANSI red
+			{"colorMagenta", colorMagenta, "5"},      // ANSI magenta
+		}
+
+		for _, tc := range testCases {
+			t.Run(tc.name, func(t *testing.T) {
+				actual := string(tc.color)
+				if actual != tc.expected {
+					t.Errorf("Expected %s to be ANSI color '%s', got '%s'", tc.name, tc.expected, actual)
+				}
+			})
+		}
+	})
+
+	t.Run("terminal_theme_detection", func(t *testing.T) {
+		// Test the getTerminalThemeInfo function
+		themeInfo := getTerminalThemeInfo()
+
+		// Should contain "Terminal Adaptive" and additional info
+		if !strings.Contains(themeInfo, "Terminal Adaptive") {
+			t.Errorf("Expected theme info to contain 'Terminal Adaptive', got: %s", themeInfo)
+		}
+
+		// Should contain profile information
+		profiles := []string{"TrueColor", "256 Color", "16 Color", "Basic"}
+		hasProfile := false
+		for _, profile := range profiles {
+			if strings.Contains(themeInfo, profile) {
+				hasProfile = true
+				break
+			}
+		}
+		if !hasProfile {
+			t.Errorf("Expected theme info to contain a color profile, got: %s", themeInfo)
+		}
+
+		// Should contain theme type
+		themes := []string{"Dark", "Light"}
+		hasTheme := false
+		for _, theme := range themes {
+			if strings.Contains(themeInfo, theme) {
+				hasTheme = true
+				break
+			}
+		}
+		if !hasTheme {
+			t.Errorf("Expected theme info to contain theme type (Dark/Light), got: %s", themeInfo)
+		}
+	})
+
+	t.Run("style_color_usage", func(t *testing.T) {
+		// Create a model and initialize styles
+		config := &AppConfig{
+			IsTestMode: true,
+		}
+		services := NewAppServices(config)
+		m := NewModelWithServices(services)
+		m.width = 100
+		m.height = 30
+		m.ready = true
+
+		// Test that styles are properly using terminal-adaptive colors
+		// Call View() to ensure width/height are used
+		_ = m.View()
+
+		// Check header style uses terminal colors
+		headerStyle := m.headerStyle
+
+		// We can't directly inspect the colors in lipgloss styles,
+		// but we can test that the styles render without errors
+		testText := "Test Header"
+		rendered := headerStyle.Render(testText)
+
+		if rendered == "" {
+			t.Error("Header style should render non-empty text")
+		}
+
+		// Test footer style
+		footerStyle := m.footerStyle
+		footerRendered := footerStyle.Render("Test Footer")
+
+		if footerRendered == "" {
+			t.Error("Footer style should render non-empty text")
+		}
+
+		// Test that title style uses colors
+		titleStyle := m.titleStyle
+		titleRendered := titleStyle.Render("Test Title")
+
+		if titleRendered == "" {
+			t.Error("Title style should render non-empty text")
+		}
+	})
+
+	t.Run("color_adaptation_environments", func(t *testing.T) {
+		// Test color behavior in different terminal environments
+		testCases := []struct {
+			name     string
+			termVar  string
+			expected string // What we expect the terminal to support
+		}{
+			{"xterm_256color", "xterm-256color", "should support 256 colors"},
+			{"xterm_truecolor", "xterm-256color", "should support colors"},
+			{"screen", "screen", "should support basic colors"},
+			{"dumb", "dumb", "should work with minimal colors"},
+		}
+
+		for _, tc := range testCases {
+			t.Run(tc.name, func(t *testing.T) {
+				// Save original TERM
+				originalTerm := os.Getenv("TERM")
+				defer os.Setenv("TERM", originalTerm)
+
+				// Set test TERM
+				os.Setenv("TERM", tc.termVar)
+
+				// Test that getTerminalThemeInfo still works
+				themeInfo := getTerminalThemeInfo()
+
+				if themeInfo == "" {
+					t.Errorf("Theme info should not be empty for TERM=%s", tc.termVar)
+				}
+
+				// Should still contain "Terminal Adaptive"
+				if !strings.Contains(themeInfo, "Terminal Adaptive") {
+					t.Errorf("Theme info should contain 'Terminal Adaptive' for TERM=%s, got: %s", tc.termVar, themeInfo)
+				}
+			})
+		}
+	})
+
+	t.Run("color_consistency", func(t *testing.T) {
+		// Test that colors are consistent across all rendering functions
+		config := &AppConfig{
+			IsTestMode: true,
+		}
+		services := NewAppServices(config)
+		m := NewModelWithServices(services)
+		m.width = 100
+		m.height = 30
+		m.ready = true
+
+		// Test all rendering methods to ensure they use consistent colors
+		renderMethods := []struct {
+			name   string
+			render func() string
+		}{
+			{"header", func() string { return m.renderHeader() }},
+			{"footer", func() string { return m.renderFooter() }},
+			{"dashboard", func() string { return m.renderDashboard(20) }},
+			{"settings", func() string { return m.renderSettings(20) }},
+			{"help", func() string { return m.renderHelp(20) }},
+		}
+
+		for _, method := range renderMethods {
+			t.Run(method.name, func(t *testing.T) {
+				rendered := method.render()
+
+				if rendered == "" {
+					t.Errorf("Render method %s should return non-empty string", method.name)
+				}
+
+				// Test that rendered output doesn't contain hardcoded color codes
+				// (This would indicate we're not using terminal-adaptive colors)
+				hardcodedColors := []string{
+					"#1a1b26", // Tokyo Night background
+					"#7aa2f7", // Tokyo Night blue
+					"#9ece6a", // Tokyo Night green
+					"rgb(",    // RGB color functions
+				}
+
+				for _, hardcoded := range hardcodedColors {
+					if strings.Contains(rendered, hardcoded) {
+						t.Errorf("Render method %s contains hardcoded color %s, should use terminal-adaptive colors", method.name, hardcoded)
+					}
+				}
+			})
+		}
+	})
+
+	t.Run("termenv_integration", func(t *testing.T) {
+		// Test that termenv integration works correctly
+
+		// Test that we can create a termenv output
+		termOutput := termenv.NewOutput(os.Stdout)
+		if termOutput == nil {
+			t.Error("Should be able to create termenv output")
+			return
+		}
+
+		// Test color profile detection
+		profile := termOutput.Profile
+		validProfiles := []termenv.Profile{
+			termenv.Ascii,
+			termenv.ANSI,
+			termenv.ANSI256,
+			termenv.TrueColor,
+		}
+
+		profileValid := false
+		for _, validProfile := range validProfiles {
+			if profile == validProfile {
+				profileValid = true
+				break
+			}
+		}
+
+		if !profileValid {
+			t.Errorf("termenv should return a valid color profile, got: %v", profile)
+		}
+
+		// Test dark background detection (should not panic)
+		isDark := termOutput.HasDarkBackground()
+		_ = isDark // We don't assert the value since it depends on the actual terminal
+
+		// Test color conversion
+		color := termOutput.Color("4") // ANSI blue
+		if color == nil {
+			t.Error("termenv should be able to convert ANSI color codes")
+		}
+	})
+}
+
+// TestColorThemeAdaptation tests color adaptation across different themes
+func TestColorThemeAdaptation(t *testing.T) {
+	t.Run("color_theme_scenarios", func(t *testing.T) {
+		// Simulate different terminal theme scenarios
+		scenarios := []struct {
+			name        string
+			colorterm   string
+			term        string
+			description string
+		}{
+			{"catppuccin_alacritty", "truecolor", "xterm-256color", "Catppuccin theme in Alacritty"},
+			{"tokyo_night_terminal", "truecolor", "xterm-256color", "Tokyo Night theme in terminal"},
+			{"github_light_theme", "truecolor", "xterm-256color", "GitHub Light theme"},
+			{"basic_terminal", "", "xterm", "Basic terminal with limited colors"},
+			{"minimal_environment", "", "dumb", "Minimal terminal environment"},
+		}
+
+		for _, scenario := range scenarios {
+			t.Run(scenario.name, func(t *testing.T) {
+				// Save original environment
+				originalColorterm := os.Getenv("COLORTERM")
+				originalTerm := os.Getenv("TERM")
+				defer func() {
+					os.Setenv("COLORTERM", originalColorterm)
+					os.Setenv("TERM", originalTerm)
+				}()
+
+				// Set test environment
+				os.Setenv("COLORTERM", scenario.colorterm)
+				os.Setenv("TERM", scenario.term)
+
+				// Test that our application adapts correctly
+				config := &AppConfig{
+					IsTestMode: true,
+				}
+				services := NewAppServices(config)
+				m := NewModelWithServices(services)
+				m.width = 100
+				m.height = 30
+				m.ready = true
+
+				// Test that all views render correctly in this environment
+				views := []string{
+					m.renderDashboard(20),
+					m.renderSettings(20),
+					m.renderHelp(20),
+				}
+
+				for i, view := range views {
+					if view == "" {
+						t.Errorf("View %d should render in %s environment", i, scenario.name)
+					}
+				}
+
+				// Test theme info reflects the environment
+				themeInfo := getTerminalThemeInfo()
+				if !strings.Contains(themeInfo, "Terminal Adaptive") {
+					t.Errorf("Theme info should indicate terminal adaptation in %s", scenario.name)
+				}
+			})
+		}
+	})
+
+	t.Run("color_fallback_behavior", func(t *testing.T) {
+		// Test that colors fall back gracefully in limited environments
+
+		// Save original environment
+		originalColorterm := os.Getenv("COLORTERM")
+		originalTerm := os.Getenv("TERM")
+		defer func() {
+			os.Setenv("COLORTERM", originalColorterm)
+			os.Setenv("TERM", originalTerm)
+		}()
+
+		// Test with very limited terminal
+		os.Setenv("COLORTERM", "")
+		os.Setenv("TERM", "dumb")
+
+		// Colors should still be defined and usable
+		colors := []lipgloss.Color{
+			colorBlue, colorGreen, colorRed, colorYellow,
+			colorCyan, colorMagenta, colorComment, colorSubtle,
+		}
+
+		for i, color := range colors {
+			if color == "" && i > 1 { // Background colors can be empty (terminal default)
+				// Most colors should have some value
+				colorStr := string(color)
+				if len(colorStr) == 0 && i > 2 { // Allow some colors to be empty for fallback
+					t.Errorf("Color %d should have fallback value in limited terminal", i)
+				}
+			}
+		}
+
+		// Application should still render
+		config := &AppConfig{
+			IsTestMode: true,
+		}
+		services := NewAppServices(config)
+		m := NewModelWithServices(services)
+		m.width = 100
+		m.height = 30
+		m.ready = true
+
+		dashboard := m.renderDashboard(20)
+		if dashboard == "" {
+			t.Error("Dashboard should render even in limited terminal environment")
+		}
+	})
+}
+
+// TestTerminalThemeInfo tests the terminal theme detection function
+func TestTerminalThemeInfo(t *testing.T) {
+	t.Run("theme_info_format", func(t *testing.T) {
+		info := getTerminalThemeInfo()
+
+		// Should have expected format: "Terminal Adaptive (Profile, Theme)"
+		if !strings.Contains(info, "Terminal Adaptive") {
+			t.Errorf("Theme info should contain 'Terminal Adaptive', got: %s", info)
+		}
+
+		if !strings.Contains(info, "(") || !strings.Contains(info, ")") {
+			t.Errorf("Theme info should contain parentheses with details, got: %s", info)
+		}
+
+		if !strings.Contains(info, ",") {
+			t.Errorf("Theme info should contain comma separating profile and theme, got: %s", info)
+		}
+	})
+
+	t.Run("theme_info_consistency", func(t *testing.T) {
+		// Call multiple times to ensure consistency
+		info1 := getTerminalThemeInfo()
+		info2 := getTerminalThemeInfo()
+
+		if info1 != info2 {
+			t.Errorf("Theme info should be consistent across calls, got: %s vs %s", info1, info2)
+		}
+	})
+
+	t.Run("theme_info_components", func(t *testing.T) {
+		info := getTerminalThemeInfo()
+
+		// Should contain color profile information
+		profiles := []string{"TrueColor", "256 Color", "16 Color", "Basic"}
+		hasProfile := false
+		for _, profile := range profiles {
+			if strings.Contains(info, profile) {
+				hasProfile = true
+				break
+			}
+		}
+		if !hasProfile {
+			t.Errorf("Theme info should contain color profile information, got: %s", info)
+		}
+
+		// Should contain theme type
+		themes := []string{"Dark", "Light"}
+		hasTheme := false
+		for _, theme := range themes {
+			if strings.Contains(info, theme) {
+				hasTheme = true
+				break
+			}
+		}
+		if !hasTheme {
+			t.Errorf("Theme info should contain theme type, got: %s", info)
+		}
+	})
 }

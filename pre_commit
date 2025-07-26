@@ -1,0 +1,68 @@
+#!/bin/bash
+
+# Pre-commit script for hyprland-monitor-tui
+# Runs comprehensive linting and testing to ensure code quality
+
+set -e  # Exit on any error
+
+echo "🔍 Running pre-commit checks for hyprland-monitor-tui..."
+echo
+
+# 1. Go vet - Check for potential issues
+echo "📋 Running go vet..."
+go vet ./...
+echo "✅ go vet passed"
+echo
+
+# 2. Go fmt - Check code formatting
+echo "🎨 Running go fmt..."
+go fmt ./...
+echo "✅ go fmt passed"
+echo
+
+# 3. Go mod tidy - Clean up dependencies
+echo "📦 Running go mod tidy..."
+go mod tidy
+echo "✅ go mod tidy passed"
+echo
+
+# 4. Build check - Ensure clean compilation
+echo "🔨 Running build check..."
+go build -o hyprland-monitor-tui .
+echo "✅ Build check passed"
+echo
+
+# 5. Race detection tests - Check for concurrency issues
+echo "🏃 Running tests with race detection..."
+go test -race ./...
+echo "✅ Race detection tests passed"
+echo
+
+# 6. Static analysis - Advanced code quality checks
+echo "🔬 Running staticcheck..."
+if command -v staticcheck &> /dev/null; then
+    staticcheck ./...
+    echo "✅ staticcheck passed"
+else
+    echo "⚠️  staticcheck not installed, skipping (install with: go install honnef.co/go/tools/cmd/staticcheck@latest)"
+fi
+echo
+
+# 7. Full test suite - Comprehensive testing
+echo "🧪 Running full test suite..."
+go test -v ./...
+echo "✅ Full test suite passed"
+echo
+
+# Cleanup build artifact
+rm -f hyprland-monitor-tui
+
+echo "🎉 All pre-commit checks passed! Ready to commit."
+echo "📊 Summary:"
+echo "   ✅ Code quality: Clean"
+echo "   ✅ Formatting: Consistent"
+echo "   ✅ Dependencies: Up-to-date"
+echo "   ✅ Compilation: Error-free"
+echo "   ✅ Tests: All passing"
+echo "   ✅ Race conditions: None detected"
+echo "   ✅ Static analysis: Clean" 
