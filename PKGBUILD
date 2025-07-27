@@ -42,7 +42,7 @@ build() {
         -mod=readonly \
         -modcacherw \
         -ldflags "-linkmode external -extldflags \"${LDFLAGS}\" -s -w -X main.version=${pkgver}" \
-        -o ${pkgname} .
+        -o ${pkgname} ./cmd/omarchy-monitor-settings
 }
 
 package() {

@@ -30,7 +30,7 @@ if [ -z "$OMARCHY_BARE" ] && ! command -v omarchy-monitor-settings &>/dev/null; 
     
     # Build with version information
     VERSION=$(git describe --tags --always --dirty 2>/dev/null || echo "dev")
-    go build -ldflags "-s -w -X main.version=${VERSION}" -o omarchy-monitor-settings .
+    go build -ldflags "-s -w -X main.version=${VERSION}" -o omarchy-monitor-settings ./cmd/omarchy-monitor-settings
     
     sudo mv omarchy-monitor-settings /usr/local/bin/
     sudo chmod +x /usr/local/bin/omarchy-monitor-settings

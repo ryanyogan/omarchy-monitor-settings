@@ -1,4 +1,4 @@
-package main
+package tui
 
 import (
 	"os"
@@ -8,10 +8,23 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/muesli/termenv"
+	"github.com/ryanyogan/omarchy-monitor-settings/internal/app"
+	"github.com/ryanyogan/omarchy-monitor-settings/internal/monitor"
 )
 
+func createTestModel() Model {
+	config := &app.Config{
+		NoHyprlandCheck: true,
+		DebugMode:       false,
+		ForceLiveMode:   false,
+		IsTestMode:      true,
+	}
+	services := app.NewServices(config)
+	return NewModelWithServices(services)
+}
+
 func TestNewModel(t *testing.T) {
-	model := NewModel()
+	model := createTestModel()
 
 	if model.mode != ModeDashboard {
 		t.Errorf("Expected ModeDashboard, got %v", model.mode)
@@ -512,7 +525,7 @@ func TestScalingOptions(t *testing.T) {
 		t.Skip("No monitors available for testing")
 	}
 
-	scalingManager := NewScalingManager()
+	scalingManager := monitor.NewScalingManager()
 	options := scalingManager.GetIntelligentScalingOptions(model.monitors[0])
 
 	if len(options) == 0 {
@@ -601,7 +614,7 @@ func TestEdgeCases(t *testing.T) {
 			name: "empty monitors list",
 			setupModel: func() Model {
 				model := NewModel()
-				model.monitors = []Monitor{}
+				model.monitors = []monitor.Monitor{}
 				return model
 			},
 			key:         "enter",
@@ -890,10 +903,10 @@ func TestTerminalColorInheritance(t *testing.T) {
 	})
 
 	t.Run("style_color_usage", func(t *testing.T) {
-		config := &AppConfig{
+		config := &app.Config{
 			IsTestMode: true,
 		}
-		services := NewAppServices(config)
+		services := app.NewServices(config)
 		m := NewModelWithServices(services)
 		m.width = 100
 		m.height = 30
@@ -958,10 +971,10 @@ func TestTerminalColorInheritance(t *testing.T) {
 	})
 
 	t.Run("color_consistency", func(t *testing.T) {
-		config := &AppConfig{
+		config := &app.Config{
 			IsTestMode: true,
 		}
-		services := NewAppServices(config)
+		services := app.NewServices(config)
 		m := NewModelWithServices(services)
 		m.width = 100
 		m.height = 30
@@ -1067,10 +1080,10 @@ func TestColorThemeAdaptation(t *testing.T) {
 				os.Setenv("COLORTERM", scenario.colorterm)
 				os.Setenv("TERM", scenario.term)
 
-				config := &AppConfig{
+				config := &app.Config{
 					IsTestMode: true,
 				}
-				services := NewAppServices(config)
+				services := app.NewServices(config)
 				m := NewModelWithServices(services)
 				m.width = 100
 				m.height = 30
@@ -1122,10 +1135,10 @@ func TestColorThemeAdaptation(t *testing.T) {
 			}
 		}
 
-		config := &AppConfig{
+		config := &app.Config{
 			IsTestMode: true,
 		}
-		services := NewAppServices(config)
+		services := app.NewServices(config)
 		m := NewModelWithServices(services)
 		m.width = 100
 		m.height = 30
@@ -1191,4 +1204,80 @@ func TestTerminalThemeInfo(t *testing.T) {
 			t.Errorf("Theme info should contain theme type, got: %s", info)
 		}
 	})
+}
+
+func TestScalingChangesReflectedInDashboard(t *testing.T) {
+	model := NewModel()
+
+	if len(model.monitors) == 0 {
+		t.Skip("No monitors available for testing")
+	}
+
+	// Note: original scale is 1.0 by default
+
+	// Simulate applying smart scaling
+	model.mode = ModeConfirmation
+	model.confirmationAction = ConfirmSmartScaling
+	model.selectedMonitor = 0
+	model.pendingOption = monitor.ScalingOption{
+		MonitorScale: 1.5,
+		GTKScale:     1,
+		FontDPI:      96,
+		DisplayName:  "Test Scaling",
+		Description:  "Test scaling option",
+	}
+	model.pendingMonitor = model.monitors[0]
+
+	// Simulate pressing Enter to apply changes
+	keyMsg := tea.KeyMsg{Type: tea.KeyEnter}
+	updatedModel, _ := model.handleKeyPress(keyMsg)
+
+	if model, ok := updatedModel.(Model); ok {
+		// Check that the scale was updated in the monitors array
+		if model.monitors[0].Scale != 1.5 {
+			t.Errorf("Expected monitor scale to be updated to 1.5, got %.1f", model.monitors[0].Scale)
+		}
+
+		// Check that we returned to dashboard mode
+		if model.mode != ModeDashboard {
+			t.Errorf("Expected to return to dashboard mode, got %v", model.mode)
+		}
+
+		// Verify the dashboard shows the updated scale
+		dashboard := model.renderDashboard(20)
+		if !strings.Contains(dashboard, "Scale: 1.5x") {
+			t.Error("Dashboard should display the updated scale value")
+		}
+	}
+
+	// Test manual scaling
+	model2 := NewModel()
+	if len(model2.monitors) == 0 {
+		t.Skip("No monitors available for testing")
+	}
+
+	// Note: original scale is 1.0 by default
+	model2.manualMonitorScale = 2.0
+
+	// Simulate applying manual scaling
+	model2.mode = ModeConfirmation
+	model2.confirmationAction = ConfirmManualScaling
+	model2.selectedMonitor = 0
+	model2.pendingMonitor = model2.monitors[0]
+
+	// Simulate pressing Enter to apply changes
+	updatedModel2, _ := model2.handleKeyPress(keyMsg)
+
+	if model2, ok := updatedModel2.(Model); ok {
+		// Check that the scale was updated in the monitors array
+		if model2.monitors[0].Scale != 2.0 {
+			t.Errorf("Expected monitor scale to be updated to 2.0, got %.1f", model2.monitors[0].Scale)
+		}
+
+		// Verify the dashboard shows the updated scale
+		dashboard := model2.renderDashboard(20)
+		if !strings.Contains(dashboard, "Scale: 2.0x") {
+			t.Error("Dashboard should display the updated manual scale value")
+		}
+	}
 }

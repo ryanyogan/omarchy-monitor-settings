@@ -1,4 +1,4 @@
-package main
+package tui
 
 import (
 	"fmt"
@@ -8,6 +8,8 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/muesli/termenv"
+	"github.com/ryanyogan/omarchy-monitor-settings/internal/app"
+	"github.com/ryanyogan/omarchy-monitor-settings/internal/monitor"
 	"github.com/ryanyogan/omarchy-monitor-settings/pkg/types"
 	"github.com/ryanyogan/omarchy-monitor-settings/pkg/utils"
 )
@@ -102,10 +104,10 @@ type Model struct {
 	menuItems      []string
 	selectedOption int
 
-	monitors           []Monitor
+	monitors           []monitor.Monitor
 	selectedMonitor    int
 	selectedScalingOpt int
-	scalingOptions     []ScalingOption
+	scalingOptions     []monitor.ScalingOption
 
 	manualMonitorScale    float64
 	manualGTKScale        int
@@ -113,13 +115,13 @@ type Model struct {
 	selectedManualControl int
 
 	confirmationAction ConfirmationAction
-	pendingOption      ScalingOption
-	pendingMonitor     Monitor
+	pendingOption      monitor.ScalingOption
+	pendingMonitor     monitor.Monitor
 
 	isDemoMode bool
 	ready      bool
 
-	services *AppServices
+	services *app.Services
 
 	cachedTerminalTheme string
 	cachedCommandStatus map[string]bool
@@ -135,17 +137,17 @@ type Model struct {
 }
 
 func NewModel() Model {
-	config := &AppConfig{
-		NoHyprlandCheck: noHyprlandCheck,
-		DebugMode:       debugMode,
-		ForceLiveMode:   forceLiveMode,
-		IsTestMode:      false,
+	config := &app.Config{
+		NoHyprlandCheck: true,
+		DebugMode:       false,
+		ForceLiveMode:   false,
+		IsTestMode:      true,
 	}
-	services := NewAppServices(config)
+	services := app.NewServices(config)
 	return NewModelWithServices(services)
 }
 
-func NewModelWithServices(services *AppServices) Model {
+func NewModelWithServices(services *app.Services) Model {
 	m := Model{
 		mode:           ModeDashboard,
 		selectedOption: 0,
@@ -239,8 +241,8 @@ func (m *Model) loadMonitors() {
 		}
 		m.isDemoMode = true
 
-		if detector, ok := m.services.MonitorDetector.(*MonitorDetector); ok {
-			monitors, _ = detector.getFallbackMonitors()
+		if detector, ok := m.services.MonitorDetector.(*monitor.Detector); ok {
+			monitors = detector.GetFallbackMonitors()
 		}
 	} else {
 		if m.services.Config.DebugMode {
@@ -392,7 +394,7 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			if len(m.monitors) > 0 && m.selectedMonitor < len(m.monitors) {
 				m.confirmationAction = ConfirmManualScaling
 				m.pendingMonitor = m.monitors[m.selectedMonitor]
-				m.pendingOption = ScalingOption{
+				m.pendingOption = monitor.ScalingOption{
 					MonitorScale: m.manualMonitorScale,
 					GTKScale:     m.manualGTKScale,
 					FontDPI:      m.manualFontDPI,
@@ -406,10 +408,18 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			switch m.confirmationAction {
 			case ConfirmSmartScaling:
 				_ = m.services.ConfigManager.ApplyCompleteScalingOption(m.pendingMonitor, m.pendingOption)
+				// Update the local monitor data with new scale
+				if m.selectedMonitor < len(m.monitors) {
+					m.monitors[m.selectedMonitor].Scale = m.pendingOption.MonitorScale
+				}
 			case ConfirmManualScaling:
 				_ = m.services.ConfigManager.ApplyMonitorScale(m.pendingMonitor, m.manualMonitorScale)
 				_ = m.services.ConfigManager.ApplyGTKScale(m.manualGTKScale)
 				_ = m.services.ConfigManager.ApplyFontDPI(m.manualFontDPI)
+				// Update the local monitor data with new scale
+				if m.selectedMonitor < len(m.monitors) {
+					m.monitors[m.selectedMonitor].Scale = m.manualMonitorScale
+				}
 			}
 			m.confirmationAction = ConfirmNone
 			m.mode = ModeDashboard

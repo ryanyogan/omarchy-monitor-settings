@@ -31,6 +31,15 @@ fi
 echo
 
 echo "4. Running TUI with debug:"
-echo "Running: ./omarchy-monitor-settings --debug"
+echo "Running: omarchy-monitor-settings --debug"
 echo "================================================"
-./omarchy-monitor-settings --debug 
+
+# Try to run the installed version first, fallback to building
+if command -v omarchy-monitor-settings &> /dev/null; then
+    omarchy-monitor-settings --debug
+else
+    echo "Building from source for debug..."
+    go build -o omarchy-monitor-settings ./cmd/omarchy-monitor-settings
+    ./omarchy-monitor-settings --debug
+    rm -f omarchy-monitor-settings
+fi 

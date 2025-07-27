@@ -45,7 +45,7 @@ mod-tidy:
 
 build-check:
 	@echo "🔨 Running build check..."
-	go build -ldflags "-X main.version=$(VERSION)" -o omarchy-monitor-settings .
+	go build -ldflags "-X main.version=$(VERSION)" -o omarchy-monitor-settings ./cmd/omarchy-monitor-settings
 	@rm -f omarchy-monitor-settings
 	@echo "✅ Build check passed"
 
@@ -106,7 +106,7 @@ version:
 	@echo "Git commit: $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")"
 
 build:
-	go build -ldflags "-X main.version=$(VERSION)" -o omarchy-monitor-settings .
+	go build -ldflags "-X main.version=$(VERSION)" -o omarchy-monitor-settings ./cmd/omarchy-monitor-settings
 
 run:
 	go run .

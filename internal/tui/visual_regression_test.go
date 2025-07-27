@@ -1,9 +1,11 @@
-package main
+package tui
 
 import (
 	"fmt"
 	"testing"
 
+	"github.com/ryanyogan/omarchy-monitor-settings/internal/app"
+	"github.com/ryanyogan/omarchy-monitor-settings/internal/monitor"
 	visualtest "github.com/ryanyogan/omarchy-monitor-settings/pkg/testing"
 )
 
@@ -19,32 +21,32 @@ func TestVisualRegression(t *testing.T) {
 	}
 
 	t.Run("Dashboard", func(t *testing.T) {
-		model := createTestModel(ModeDashboard)
+		model := createTestModelForVisual(ModeDashboard)
 		vt.MultiSizeTest("dashboard", model, screenSizes)
 	})
 
 	t.Run("MonitorSelection", func(t *testing.T) {
-		model := createTestModel(ModeMonitorSelection)
+		model := createTestModelForVisual(ModeMonitorSelection)
 		vt.MultiSizeTest("monitor_selection", model, screenSizes)
 	})
 
 	t.Run("ScalingOptions", func(t *testing.T) {
-		model := createTestModel(ModeScalingOptions)
+		model := createTestModelForVisual(ModeScalingOptions)
 		vt.MultiSizeTest("scaling_options", model, screenSizes)
 	})
 
 	t.Run("ManualScaling", func(t *testing.T) {
-		model := createTestModel(ModeManualScaling)
+		model := createTestModelForVisual(ModeManualScaling)
 		vt.MultiSizeTest("manual_scaling", model, screenSizes)
 	})
 
 	t.Run("Settings", func(t *testing.T) {
-		model := createTestModel(ModeSettings)
+		model := createTestModelForVisual(ModeSettings)
 		vt.MultiSizeTest("settings", model, screenSizes)
 	})
 
 	t.Run("Help", func(t *testing.T) {
-		model := createTestModel(ModeHelp)
+		model := createTestModelForVisual(ModeHelp)
 		vt.MultiSizeTest("help", model, screenSizes)
 	})
 }
@@ -59,12 +61,12 @@ func TestVisualRegressionEdgeCases(t *testing.T) {
 			{60, 10},
 		}
 
-		model := createTestModel(ModeDashboard)
+		model := createTestModelForVisual(ModeDashboard)
 		vt.MultiSizeTest("terminal_too_small", model, smallSizes)
 	})
 
 	t.Run("NoMonitors", func(t *testing.T) {
-		model := createTestModelWithMonitors(ModeDashboard, []Monitor{})
+		model := createTestModelWithMonitors(ModeDashboard, []monitor.Monitor{})
 		vt.TestVisualRegression(visualtest.VisualTestConfig{
 			Name:   "no_monitors",
 			Width:  120,
@@ -74,7 +76,7 @@ func TestVisualRegressionEdgeCases(t *testing.T) {
 	})
 
 	t.Run("SingleMonitor", func(t *testing.T) {
-		monitor := Monitor{
+		testMonitor := monitor.Monitor{
 			Name:        "HDMI-1",
 			Make:        "Samsung",
 			Model:       "U2414H",
@@ -85,7 +87,7 @@ func TestVisualRegressionEdgeCases(t *testing.T) {
 			IsActive:    true,
 		}
 
-		model := createTestModelWithMonitors(ModeDashboard, []Monitor{monitor})
+		model := createTestModelWithMonitors(ModeDashboard, []monitor.Monitor{testMonitor})
 		vt.TestVisualRegression(visualtest.VisualTestConfig{
 			Name:   "single_monitor",
 			Width:  120,
@@ -95,9 +97,9 @@ func TestVisualRegressionEdgeCases(t *testing.T) {
 	})
 
 	t.Run("ManyMonitors", func(t *testing.T) {
-		monitors := make([]Monitor, 5)
+		monitors := make([]monitor.Monitor, 5)
 		for i := range monitors {
-			monitors[i] = Monitor{
+			monitors[i] = monitor.Monitor{
 				Name:        fmt.Sprintf("HDMI-%d", i+1),
 				Make:        "Dell",
 				Model:       fmt.Sprintf("U2414H-%d", i+1),
@@ -124,7 +126,7 @@ func TestVisualRegressionInteractions(t *testing.T) {
 
 	t.Run("NavigationStates", func(t *testing.T) {
 		for i := 0; i < 7; i++ {
-			model := createTestModel(ModeDashboard)
+			model := createTestModelForVisual(ModeDashboard)
 			model.selectedOption = i
 
 			vt.TestVisualRegression(visualtest.VisualTestConfig{
@@ -138,7 +140,7 @@ func TestVisualRegressionInteractions(t *testing.T) {
 
 	t.Run("ManualScalingControls", func(t *testing.T) {
 		for i := 0; i < 3; i++ {
-			model := createTestModel(ModeManualScaling)
+			model := createTestModelForVisual(ModeManualScaling)
 			model.selectedManualControl = i
 
 			vt.TestVisualRegression(visualtest.VisualTestConfig{
@@ -164,7 +166,7 @@ func TestVisualRegressionInteractions(t *testing.T) {
 		}
 
 		for _, tc := range testCases {
-			model := createTestModel(ModeManualScaling)
+			model := createTestModelForVisual(ModeManualScaling)
 			model.manualMonitorScale = tc.monitorScale
 			model.manualGTKScale = tc.gtkScale
 			model.manualFontDPI = tc.fontDPI
@@ -200,7 +202,7 @@ func TestVisualRegressionThemes(t *testing.T) {
 				t.Setenv("COLORTERM", env.colorterm)
 			}
 
-			model := createTestModel(ModeDashboard)
+			model := createTestModelForVisual(ModeDashboard)
 			vt.TestVisualRegression(visualtest.VisualTestConfig{
 				Name:   fmt.Sprintf("theme_%s", env.name),
 				Width:  120,
@@ -211,13 +213,13 @@ func TestVisualRegressionThemes(t *testing.T) {
 	}
 }
 
-func createTestModel(mode AppMode) Model {
-	config := &AppConfig{
+func createTestModelForVisual(mode AppMode) Model {
+	config := &app.Config{
 		DebugMode:       false,
 		NoHyprlandCheck: true,
 	}
 
-	services := &AppServices{
+	services := &app.Services{
 		Config:          config,
 		MonitorDetector: &MockMonitorDetector{},
 		ScalingManager:  &MockScalingManager{},
@@ -228,7 +230,7 @@ func createTestModel(mode AppMode) Model {
 	model.mode = mode
 	model.ready = true
 
-	model.monitors = []Monitor{
+	model.monitors = []monitor.Monitor{
 		{
 			Name:        "HDMI-A-1",
 			Make:        "Dell",
@@ -254,16 +256,16 @@ func createTestModel(mode AppMode) Model {
 	return model
 }
 
-func createTestModelWithMonitors(mode AppMode, monitors []Monitor) Model {
-	model := createTestModel(mode)
+func createTestModelWithMonitors(mode AppMode, monitors []monitor.Monitor) Model {
+	model := createTestModelForVisual(mode)
 	model.monitors = monitors
 	return model
 }
 
 type MockMonitorDetector struct{}
 
-func (m *MockMonitorDetector) DetectMonitors() ([]Monitor, error) {
-	return []Monitor{
+func (m *MockMonitorDetector) DetectMonitors() ([]monitor.Monitor, error) {
+	return []monitor.Monitor{
 		{
 			Name:        "HDMI-A-1",
 			Make:        "Dell",
@@ -279,8 +281,8 @@ func (m *MockMonitorDetector) DetectMonitors() ([]Monitor, error) {
 
 type MockScalingManager struct{}
 
-func (m *MockScalingManager) GetIntelligentScalingOptions(monitor Monitor) []ScalingOption {
-	return []ScalingOption{
+func (m *MockScalingManager) GetIntelligentScalingOptions(mon monitor.Monitor) []monitor.ScalingOption {
+	return []monitor.ScalingOption{
 		{
 			DisplayName:     "Standard (1x)",
 			Description:     "Default scaling for sharp text",
@@ -288,8 +290,8 @@ func (m *MockScalingManager) GetIntelligentScalingOptions(monitor Monitor) []Sca
 			GTKScale:        1,
 			FontDPI:         96,
 			IsRecommended:   true,
-			EffectiveWidth:  monitor.Width,
-			EffectiveHeight: monitor.Height,
+			EffectiveWidth:  mon.Width,
+			EffectiveHeight: mon.Height,
 		},
 		{
 			DisplayName:     "Large (1.25x)",
@@ -298,15 +300,15 @@ func (m *MockScalingManager) GetIntelligentScalingOptions(monitor Monitor) []Sca
 			GTKScale:        1,
 			FontDPI:         120,
 			IsRecommended:   false,
-			EffectiveWidth:  int(float64(monitor.Width) / 1.25),
-			EffectiveHeight: int(float64(monitor.Height) / 1.25),
+			EffectiveWidth:  int(float64(mon.Width) / 1.25),
+			EffectiveHeight: int(float64(mon.Height) / 1.25),
 		},
 	}
 }
 
 type MockConfigManager struct{}
 
-func (m *MockConfigManager) ApplyMonitorScale(monitor Monitor, scale float64) error {
+func (m *MockConfigManager) ApplyMonitorScale(monitor monitor.Monitor, scale float64) error {
 	return nil
 }
 
@@ -318,6 +320,6 @@ func (m *MockConfigManager) ApplyFontDPI(dpi int) error {
 	return nil
 }
 
-func (m *MockConfigManager) ApplyCompleteScalingOption(monitor Monitor, option ScalingOption) error {
+func (m *MockConfigManager) ApplyCompleteScalingOption(mon monitor.Monitor, option monitor.ScalingOption) error {
 	return nil
 }

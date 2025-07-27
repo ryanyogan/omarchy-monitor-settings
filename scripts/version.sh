@@ -79,7 +79,7 @@ build_with_version() {
     local version=$(get_current_version)
     print_info "Building with version: ${version}"
     
-    go build -ldflags "-X main.version=${version}" -o omarchy-monitor-settings .
+    go build -ldflags "-X main.version=${version}" -o omarchy-monitor-settings ./cmd/omarchy-monitor-settings
     print_success "Build completed successfully!"
 }
 

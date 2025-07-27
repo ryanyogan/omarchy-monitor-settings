@@ -119,7 +119,7 @@ build_app() {
     
     go build -v \
         -ldflags "-s -w -X main.version=${VERSION}" \
-        -o omarchy-monitor-settings .
+        -o omarchy-monitor-settings ./cmd/omarchy-monitor-settings
     
     print_step "Build completed"
 }
