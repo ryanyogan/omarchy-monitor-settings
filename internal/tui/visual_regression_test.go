@@ -309,6 +309,16 @@ func (m *MockScalingManager) GetIntelligentScalingOptions(mon monitor.Monitor) [
 			EffectiveHeight: int(float64(mon.Height) / 1.25),
 		},
 		{
+			DisplayName:     "1.67x Enhanced",
+			Description:     "Great balance of clarity and space",
+			MonitorScale:    1.66667,
+			GTKScale:        1,
+			FontDPI:         160,
+			IsRecommended:   false,
+			EffectiveWidth:  int(float64(mon.Width) / 1.66667),
+			EffectiveHeight: int(float64(mon.Height) / 1.66667),
+		},
+		{
 			DisplayName:     "1.5x Large",
 			Description:     "Larger text for accessibility",
 			MonitorScale:    1.5,

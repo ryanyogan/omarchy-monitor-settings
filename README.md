@@ -114,12 +114,12 @@ The application provides intelligent scaling recommendations based on your monit
 
 #### High DPI Displays (2.8K, 4K, 5K, 6K)
 - **2x Ultra Sharp**: Perfect integer scaling for maximum clarity
-- **1.75x Enhanced**: Great balance of clarity and screen space
+- **1.67x Enhanced**: Great balance of clarity and screen space
 - **1.5x Productive**: Maximum screen real estate for workflows
 
 #### Framework 13 (2.8K Display)
 - **2x Ultra Sharp**: Recommended for Framework 13 with 2880x1800 display
-- **1.75x Enhanced**: Excellent productivity balance
+- **1.67x Enhanced**: Excellent productivity balance
 - **1.5x Productive**: Maximum workspace for development
 
 #### Standard Displays (1080p, 2.5K)

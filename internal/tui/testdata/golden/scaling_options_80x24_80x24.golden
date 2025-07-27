@@ -1,7 +1,7 @@
 # Visual Golden File
 # Name: scaling_options_80x24
 # Dimensions: 80x24
-# Hash: efbbfc12cf276080909add13bda23c961e1bf9e03679c5841f3998acff0a8930
+# Hash: 380af754420fba99d4d756b99ff85d1c6be8a9effebe860b269b4a0d87da45ac
 
   ╭────────────────────────────────────────────────────────────────────────╮    
   │                                                                        │    
@@ -30,6 +30,11 @@
   │    1.25x Enhanced                                                      │    
   │      Slightly larger text for better readability                       │    
   │      Monitor: 1.2x • GTK: 1x • Font DPI: 120 • Result: 1536x864        │    
+  │      💡                                                                │    
+  │                                                                        │    
+  │    1.67x Enhanced                                                      │    
+  │      Great balance of clarity and space                                │    
+  │      Monitor: 1.7x • GTK: 1x • Font DPI: 160 • Result: 1151x647        │    
   │      💡                                                                │    
   │                                                                        │    
   │    1.5x Large                                                          │    
