@@ -1,0 +1,51 @@
+Visual regression detected!
+
+=== EXPECTED ===
+                                                                      
+                                                                      
+                                                                      
+                                                                      
+                                                                      
+                                                                      
+                                                                      
+                                                                      
+                                                                      
+                          [31mTerminal too small[0m                          
+                   [31mPlease resize to at least 80x20[0m                    
+                                                                      
+                                                                      
+                                                                      
+                                                                      
+                                                                      
+                                                                      
+                                                                      
+                                                                      
+                                                                      
+
+=== ACTUAL ===
+                                                                      
+                                                                      
+                                                                      
+                                                                      
+                                                                      
+                                                                      
+                                                                      
+                                                                      
+                                                                      
+                          Terminal too small                          
+                   Please resize to at least 80x20                    
+                                                                      
+                                                                      
+                                                                      
+                                                                      
+                                                                      
+                                                                      
+                                                                      
+                                                                      
+                                                                      
+
+=== DIFF INFO ===
+Expected length: 1437
+Actual length: 1419
+Expected hash: 5130cca5f5c05d8959287f74885f9496c78be744dbd7e0e4194970ea9aacf853
+Actual hash: feac47e339391e6cdf81262f7d967a2c0088cfee17a45af7329c95a339217ac6

@@ -81,6 +81,21 @@ test-short:
 test-coverage:
 	go test -cover ./...
 
+# Visual Regression Testing
+.PHONY: visual-test visual-update visual-clean
+visual-test: ## Run visual regression tests
+	@echo "Running visual regression tests..."
+	go test -run TestVisualRegression -v
+
+visual-update: ## Update golden files for visual regression tests
+	@echo "Updating visual regression golden files..."
+	UPDATE_GOLDEN=true go test -run TestVisualRegression -v
+
+visual-clean: ## Clean visual regression test artifacts
+	@echo "Cleaning visual regression artifacts..."
+	rm -rf testdata/golden/*.diff
+	rm -rf testdata/golden/*.tmp
+
 # ================================
 # Build & Run Targets  
 # ================================
@@ -123,33 +138,19 @@ lint:
 # Help Target
 # ================================
 
-help:
+help: ## Show this help message
 	@echo "Available targets:"
 	@echo ""
 	@echo "Quality Assurance:"
-	@echo "  quality-check  - Run comprehensive quality check suite"
-	@echo "  vet           - Run go vet (potential issues detection)"
-	@echo "  fmt           - Run go fmt (code formatting)"
-	@echo "  fmt-check     - Check code formatting without modifying"
-	@echo "  mod-tidy      - Run go mod tidy (dependency cleanup)"
-	@echo "  build-check   - Run compilation verification"
-	@echo "  test-race     - Run tests with race detection"
-	@echo "  staticcheck   - Run advanced static analysis"
+	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST) | grep -E "(vet|fmt|tidy|build-check|test|lint|cover)"
 	@echo ""
-	@echo "Testing:"
-	@echo "  test          - Run basic test suite"
-	@echo "  test-verbose  - Run complete test suite with verbose output"
-	@echo "  test-short    - Run short tests only"
-	@echo "  test-coverage - Run tests with coverage report"
-	@echo "  bench         - Run benchmarks"
+	@echo "Visual Testing:"
+	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST) | grep -E "(visual-)"
 	@echo ""
-	@echo "Build & Run:"
-	@echo "  build         - Build the application"
-	@echo "  run           - Run the application"
-	@echo "  clean         - Clean build artifacts"
-	@echo "  version       - Show current version info"
+	@echo "Build & Development:"
+	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST) | grep -E "(build|run|version|install|clean)" | grep -v visual
 	@echo ""
-	@echo "Development:"
-	@echo "  deps          - Install and tidy dependencies"
-	@echo "  lint          - Run linter (requires golangci-lint)"
-	@echo "  help          - Show this help message" 
+	@echo "Quick Commands:"
+	@echo "  \033[36mmake qa\033[0m         - Run all quality checks"
+	@echo "  \033[36mmake visual-test\033[0m - Run visual regression tests"
+	@echo "  \033[36mmake build\033[0m      - Build the application" 

@@ -2,13 +2,14 @@ package main
 
 import (
 	"fmt"
-	"math"
 	"os"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/muesli/termenv"
+	"github.com/ryanyogan/omarchy-monitor-settings/pkg/types"
+	"github.com/ryanyogan/omarchy-monitor-settings/pkg/utils"
 )
 
 var (
@@ -56,43 +57,7 @@ func getTerminalThemeInfo() string {
 }
 
 func getValidHyprlandScales() []float64 {
-	return []float64{1.0, 1.25, 1.33333, 1.5, 1.66667, 1.75, 2.0, 2.25, 2.5, 3.0}
-}
-
-func findNextValidScale(current float64, up bool) float64 {
-	validScales := getValidHyprlandScales()
-
-	currentIndex := -1
-	for i, scale := range validScales {
-		if math.Abs(scale-current) < 0.001 {
-			currentIndex = i
-			break
-		}
-	}
-
-	if currentIndex == -1 {
-		minDiff := math.Abs(validScales[0] - current)
-		currentIndex = 0
-		for i, scale := range validScales {
-			diff := math.Abs(scale - current)
-			if diff < minDiff {
-				minDiff = diff
-				currentIndex = i
-			}
-		}
-	}
-
-	if up {
-		if currentIndex < len(validScales)-1 {
-			return validScales[currentIndex+1]
-		}
-		return validScales[len(validScales)-1]
-	} else {
-		if currentIndex > 0 {
-			return validScales[currentIndex-1]
-		}
-		return validScales[0]
-	}
+	return types.ValidHyprlandScales
 }
 
 type AppMode int
@@ -198,7 +163,7 @@ func NewModelWithServices(services *AppServices) Model {
 
 		manualMonitorScale:    1.0,
 		manualGTKScale:        1,
-		manualFontDPI:         96,
+		manualFontDPI:         types.BaseDPI,
 		selectedManualControl: 0,
 	}
 
@@ -366,9 +331,9 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if m.mode == ModeManualScaling {
 			switch m.selectedManualControl {
 			case 0:
-				m.manualMonitorScale = findNextValidScale(m.manualMonitorScale, false)
+				m.manualMonitorScale = utils.FindNextValidScale(m.manualMonitorScale, false, types.ValidHyprlandScales)
 			case 1:
-				if m.manualGTKScale > 1 {
+				if m.manualGTKScale > types.MinGTKScale {
 					m.manualGTKScale--
 				}
 			case 2:
@@ -385,9 +350,9 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if m.mode == ModeManualScaling {
 			switch m.selectedManualControl {
 			case 0:
-				m.manualMonitorScale = findNextValidScale(m.manualMonitorScale, true)
+				m.manualMonitorScale = utils.FindNextValidScale(m.manualMonitorScale, true, types.ValidHyprlandScales)
 			case 1:
-				if m.manualGTKScale < 3 {
+				if m.manualGTKScale < types.MaxGTKScale {
 					m.manualGTKScale++
 				}
 			case 2:
@@ -499,13 +464,13 @@ func (m Model) handleSelection() (tea.Model, tea.Cmd) {
 }
 
 func (m Model) View() string {
-	if m.width < 80 || m.height < 20 {
+	if m.width < types.MinTerminalWidth || m.height < types.MinTerminalHeight {
 		return lipgloss.NewStyle().
 			Width(m.width).
 			Height(m.height).
 			Align(lipgloss.Center, lipgloss.Center).
 			Foreground(colorRed).
-			Render("Terminal too small\nPlease resize to at least 80x20")
+			Render(types.ErrTerminalTooSmall)
 	}
 
 	if !m.ready {
@@ -731,7 +696,7 @@ func (m Model) renderDashboard(contentHeight int) string {
 
 		details := []string{
 			lipgloss.NewStyle().Foreground(colorSubtle).Render(fmt.Sprintf("  %s %s", monitor.Make, monitor.Model)),
-			lipgloss.NewStyle().Foreground(colorComment).Render(fmt.Sprintf("  %dx%d @ %.0fHz", monitor.Width, monitor.Height, monitor.RefreshRate)),
+			lipgloss.NewStyle().Foreground(colorComment).Render(fmt.Sprintf("  %s @ %.0fHz", utils.FormatResolution(monitor.Width, monitor.Height), monitor.RefreshRate)),
 			lipgloss.NewStyle().Foreground(colorComment).Render(fmt.Sprintf("  Scale: %.1fx", monitor.Scale)),
 		}
 
@@ -751,7 +716,7 @@ func (m Model) renderDashboard(contentHeight int) string {
 		demoNotice := lipgloss.NewStyle().
 			Foreground(colorYellow).
 			Italic(true).
-			Render("�� Demo Mode Active")
+			Render("📱 Demo Mode Active")
 		rightPanel = append(rightPanel, demoNotice)
 	}
 
@@ -833,14 +798,14 @@ func (m Model) renderMonitorSelection(contentHeight int) string {
 				nameStyle.Render(monitor.Name),
 				statusStyle.Render(statusText),
 				detailStyle.Render(fmt.Sprintf("%s %s", monitor.Make, monitor.Model)),
-				detailStyle.Render(fmt.Sprintf("%dx%d @ %.0fHz", monitor.Width, monitor.Height, monitor.RefreshRate)),
+				detailStyle.Render(fmt.Sprintf("%s @ %.0fHz", utils.FormatResolution(monitor.Width, monitor.Height), monitor.RefreshRate)),
 			)
 		} else {
 			card = fmt.Sprintf("  %s %s\n    %s\n    %s",
 				nameStyle.Render(monitor.Name),
 				statusStyle.Render(statusText),
 				detailStyle.Render(fmt.Sprintf("%s %s", monitor.Make, monitor.Model)),
-				detailStyle.Render(fmt.Sprintf("%dx%d @ %.0fHz", monitor.Width, monitor.Height, monitor.RefreshRate)),
+				detailStyle.Render(fmt.Sprintf("%s @ %.0fHz", utils.FormatResolution(monitor.Width, monitor.Height), monitor.RefreshRate)),
 			)
 		}
 
@@ -1125,10 +1090,9 @@ func (m Model) renderManualScaling(contentHeight int) string {
 	content = append(content, "")
 
 	// Results preview
-	effectiveWidth := int(float64(selectedMonitor.Width) / m.manualMonitorScale)
-	effectiveHeight := int(float64(selectedMonitor.Height) / m.manualMonitorScale)
-	screenRealEstate := 100.0 / m.manualMonitorScale
-	fontMultiplier := float64(m.manualFontDPI) / 96.0
+	effectiveWidth, effectiveHeight := utils.CalculateEffectiveResolution(selectedMonitor.Width, selectedMonitor.Height, m.manualMonitorScale)
+	screenRealEstate := utils.CalculateScreenRealEstate(m.manualMonitorScale)
+	fontMultiplier := utils.CalculateFontMultiplier(m.manualFontDPI, types.BaseDPI)
 
 	resultsTitle := lipgloss.NewStyle().Foreground(colorGreen).Bold(true).Render("📊 Preview Results")
 	content = append(content, resultsTitle)
