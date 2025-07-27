@@ -1,34 +1,31 @@
 package utils
 
-// ValidateGTKScale ensures GTK scale is within bounds.
-func ValidateGTKScale(scale, min, max int) int {
-	if scale < min {
-		return min
+func ValidateGTKScale(scale, minVal, maxVal int) int {
+	if scale < minVal {
+		return minVal
 	}
-	if scale > max {
-		return max
-	}
-	return scale
-}
-
-// ValidateMonitorScale ensures monitor scale is valid.
-func ValidateMonitorScale(scale, min, max float64) float64 {
-	if scale < min {
-		return min
-	}
-	if scale > max {
-		return max
+	if scale > maxVal {
+		return maxVal
 	}
 	return scale
 }
 
-// ValidateFontDPI ensures font DPI is within bounds.
-func ValidateFontDPI(dpi, min, max int) int {
-	if dpi < min {
-		return min
+func ValidateMonitorScale(scale, minVal, maxVal float64) float64 {
+	if scale < minVal {
+		return minVal
 	}
-	if dpi > max {
-		return max
+	if scale > maxVal {
+		return maxVal
+	}
+	return scale
+}
+
+func ValidateFontDPI(dpi, minVal, maxVal int) int {
+	if dpi < minVal {
+		return minVal
+	}
+	if dpi > maxVal {
+		return maxVal
 	}
 	return dpi
 }

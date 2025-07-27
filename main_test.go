@@ -8,7 +8,6 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-// TestMain tests the main function and command line flags
 func TestMain(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -18,25 +17,22 @@ func TestMain(t *testing.T) {
 		{
 			name:     "with version flag",
 			args:     []string{"omarchy-monitor-settings", "--version"},
-			wantExit: true, // Version should exit
+			wantExit: true,
 		},
 		{
 			name:     "with help flag",
 			args:     []string{"omarchy-monitor-settings", "--help"},
-			wantExit: true, // Help should exit
+			wantExit: true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Save original args
 			originalArgs := os.Args
 			defer func() { os.Args = originalArgs }()
 
-			// Set test args
 			os.Args = tt.args
 
-			// Run in a goroutine to catch panics
 			done := make(chan bool)
 			go func() {
 				defer func() {
@@ -48,10 +44,8 @@ func TestMain(t *testing.T) {
 				main()
 			}()
 
-			// Wait for completion or timeout
 			select {
 			case <-done:
-				// Test completed
 			case <-time.After(5 * time.Second):
 				t.Error("main() timed out")
 			}
@@ -59,19 +53,15 @@ func TestMain(t *testing.T) {
 	}
 }
 
-// TestRunTUI tests the runTUI function
 func TestRunTUI(t *testing.T) {
-	// Test with test mode config
 	config := &AppConfig{
 		NoHyprlandCheck: true,
 		DebugMode:       false,
 		ForceLiveMode:   false,
-		IsTestMode:      true, // This should prevent TUI from starting
+		IsTestMode:      true,
 	}
 
-	// Test normal execution
 	err := runTUI(config)
-	// Should return error because IsTestMode is true
 	if err == nil {
 		t.Error("Expected error when IsTestMode is true, got nil")
 	}
@@ -80,9 +70,7 @@ func TestRunTUI(t *testing.T) {
 	}
 }
 
-// TestGlobalFlags tests the global flag variables
 func TestGlobalFlags(t *testing.T) {
-	// Test default values
 	if noHyprlandCheck {
 		t.Error("noHyprlandCheck should be false by default")
 	}
@@ -97,7 +85,6 @@ func TestGlobalFlags(t *testing.T) {
 	}
 }
 
-// TestTerminalEdgeCases tests edge cases specific to terminal environments
 func TestTerminalEdgeCases(t *testing.T) {
 	tests := []struct {
 		name        string
@@ -145,14 +132,11 @@ func TestTerminalEdgeCases(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Save original environment
 			originalTerm := os.Getenv(tt.termVar)
 			defer os.Setenv(tt.termVar, originalTerm)
 
-			// Set test environment
 			os.Setenv(tt.termVar, tt.terminalEnv)
 
-			// Test model creation
 			model := NewModel()
 			if model.mode != ModeDashboard {
 				t.Errorf("Expected ModeDashboard, got %v", model.mode)
@@ -161,17 +145,13 @@ func TestTerminalEdgeCases(t *testing.T) {
 	}
 }
 
-// TestSignalHandling tests signal handling in terminal environments
 func TestSignalHandling(t *testing.T) {
-	// Test that the model can handle interrupt signals gracefully
 	_ = NewModel()
 
-	// Simulate Ctrl+C
 	quitCmd := tea.Quit
-	_ = quitCmd // Use the variable to avoid unused variable warning
+	_ = quitCmd
 }
 
-// TestEnvironmentVariables tests environment variable handling
 func TestEnvironmentVariables(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -207,14 +187,11 @@ func TestEnvironmentVariables(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Save original environment
 			originalValue := os.Getenv(tt.envKey)
 			defer os.Setenv(tt.envKey, originalValue)
 
-			// Set test environment
 			os.Setenv(tt.envKey, tt.envValue)
 
-			// Test model creation
 			model := NewModel()
 			if model.mode != ModeDashboard {
 				t.Errorf("Expected ModeDashboard, got %v", model.mode)
@@ -223,32 +200,26 @@ func TestEnvironmentVariables(t *testing.T) {
 	}
 }
 
-// TestConcurrentAccess tests concurrent access to global variables
 func TestConcurrentAccess(t *testing.T) {
-	// Test that global flags can be accessed concurrently
 	done := make(chan bool, 10)
 
 	for i := 0; i < 10; i++ {
 		go func() {
 			defer func() { done <- true }()
 
-			// Access global variables
 			_ = noHyprlandCheck
 			_ = debugMode
 			_ = forceLiveMode
 			_ = version
 
-			// Create model
 			model := NewModel()
 			_ = model.mode
 		}()
 	}
 
-	// Wait for all goroutines to complete
 	for i := 0; i < 10; i++ {
 		select {
 		case <-done:
-			// Success
 		case <-time.After(5 * time.Second):
 			t.Error("Concurrent access test timed out")
 			return
@@ -256,16 +227,13 @@ func TestConcurrentAccess(t *testing.T) {
 	}
 }
 
-// TestMemoryUsage tests memory usage patterns
 func TestMemoryUsage(t *testing.T) {
-	// Test that creating multiple models doesn't cause memory leaks
 	models := make([]Model, 100)
 
 	for i := 0; i < 100; i++ {
 		models[i] = NewModel()
 	}
 
-	// Verify all models are properly initialized
 	for i, model := range models {
 		if model.mode != ModeDashboard {
 			t.Errorf("Model %d: Expected ModeDashboard, got %v", i, model.mode)
@@ -276,9 +244,7 @@ func TestMemoryUsage(t *testing.T) {
 	}
 }
 
-// TestErrorRecovery tests error recovery scenarios
 func TestErrorRecovery(t *testing.T) {
-	// Test that the application can recover from various error conditions
 	tests := []struct {
 		name        string
 		setupError  func()
@@ -288,8 +254,6 @@ func TestErrorRecovery(t *testing.T) {
 		{
 			name: "invalid terminal size",
 			setupError: func() {
-				// This would normally be set by tea.WindowSizeMsg
-				// We can't easily simulate this in tests
 			},
 			cleanup:     func() {},
 			shouldPanic: false,
@@ -297,13 +261,11 @@ func TestErrorRecovery(t *testing.T) {
 		{
 			name: "missing environment",
 			setupError: func() {
-				// Clear environment variables
 				os.Unsetenv("TERM")
 				os.Unsetenv("DISPLAY")
 				os.Unsetenv("WAYLAND_DISPLAY")
 			},
 			cleanup: func() {
-				// Restore environment
 				os.Setenv("TERM", "xterm")
 			},
 			shouldPanic: false,
@@ -321,7 +283,6 @@ func TestErrorRecovery(t *testing.T) {
 
 			tt.setupError()
 
-			// Try to create a model
 			model := NewModel()
 			if model.mode != ModeDashboard {
 				t.Errorf("Expected ModeDashboard, got %v", model.mode)
@@ -330,25 +291,19 @@ func TestErrorRecovery(t *testing.T) {
 	}
 }
 
-// BenchmarkMain benchmarks the main function
 func BenchmarkMain(b *testing.B) {
-	// Save original args
 	originalArgs := os.Args
 	defer func() { os.Args = originalArgs }()
 
-	// Set minimal args for benchmarking
 	os.Args = []string{"omarchy-monitor-settings", "--no-hyprland-check"}
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		// We can't easily benchmark main() as it runs indefinitely
-		// Instead, benchmark model creation
 		model := NewModel()
 		_ = model
 	}
 }
 
-// BenchmarkModelCreation benchmarks model creation
 func BenchmarkModelCreation(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -357,9 +312,7 @@ func BenchmarkModelCreation(b *testing.B) {
 	}
 }
 
-// BenchmarkRunTUI benchmarks the runTUI function
 func BenchmarkRunTUI(b *testing.B) {
-	// Create test config to prevent TUI from starting
 	config := &AppConfig{
 		NoHyprlandCheck: true,
 		DebugMode:       false,
@@ -369,8 +322,6 @@ func BenchmarkRunTUI(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		// Note: This will return an error due to test mode
-		// but we can still measure the attempt
 		_ = runTUI(config)
 	}
 }

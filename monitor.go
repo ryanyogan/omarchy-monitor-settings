@@ -12,21 +12,17 @@ import (
 	"github.com/ryanyogan/omarchy-monitor-settings/pkg/utils"
 )
 
-// MonitorDetector handles monitor detection across different platforms and tools
 type MonitorDetector struct{}
 
-// NewMonitorDetector creates a new monitor detector
 func NewMonitorDetector() *MonitorDetector {
 	return &MonitorDetector{}
 }
 
-// DetectMonitors attempts to detect monitors using various methods
 func (md *MonitorDetector) DetectMonitors() ([]Monitor, error) {
-	// Try different detection methods in order of preference
 	detectionMethods := []func() ([]Monitor, error){
 		md.detectWithHyprctl,
 		md.detectWithWlrRandr,
-		md.getFallbackMonitors, // Always succeeds with demo data
+		md.getFallbackMonitors,
 	}
 
 	if debugMode {
@@ -52,11 +48,9 @@ func (md *MonitorDetector) DetectMonitors() ([]Monitor, error) {
 		}
 	}
 
-	// This should never be reached due to fallback, but just in case
 	return md.getFallbackMonitors()
 }
 
-// detectWithHyprctl detects monitors using hyprctl (Hyprland's control utility)
 func (md *MonitorDetector) detectWithHyprctl() ([]Monitor, error) {
 	if !md.commandExists("hyprctl") {
 		if debugMode {
@@ -94,7 +88,6 @@ func (md *MonitorDetector) detectWithHyprctl() ([]Monitor, error) {
 	return monitors, parseErr
 }
 
-// detectWithWlrRandr detects monitors using wlr-randr (Wayland display manager)
 func (md *MonitorDetector) detectWithWlrRandr() ([]Monitor, error) {
 	if !md.commandExists("wlr-randr") {
 		return nil, fmt.Errorf("wlr-randr not found")
@@ -109,13 +102,10 @@ func (md *MonitorDetector) detectWithWlrRandr() ([]Monitor, error) {
 	return md.parseWlrRandrOutput(string(output))
 }
 
-// getFallbackMonitors provides realistic demo monitors for testing
 func (md *MonitorDetector) getFallbackMonitors() ([]Monitor, error) {
-	// Provide different demo data based on platform for realistic testing
 	var monitors []Monitor
 
 	if runtime.GOOS == "darwin" {
-		// macOS-like monitors for testing
 		monitors = []Monitor{
 			{
 				Name:        "Built-in Retina Display",
@@ -131,7 +121,6 @@ func (md *MonitorDetector) getFallbackMonitors() ([]Monitor, error) {
 			},
 		}
 	} else {
-		// Linux/Framework-like monitors for testing
 		monitors = []Monitor{
 			{
 				Name:        "eDP-1",
@@ -163,7 +152,6 @@ func (md *MonitorDetector) getFallbackMonitors() ([]Monitor, error) {
 	return monitors, nil
 }
 
-// parseHyprctlOutput parses the output from hyprctl monitors
 func (md *MonitorDetector) parseHyprctlOutput(output string) ([]Monitor, error) {
 	var monitors []Monitor
 	lines := strings.Split(output, "\n")
@@ -172,14 +160,12 @@ func (md *MonitorDetector) parseHyprctlOutput(output string) ([]Monitor, error) 
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
 
-		// Monitor line: "Monitor eDP-1 (ID 0):"
 		if strings.HasPrefix(line, "Monitor ") {
 			if currentMonitor.Name != "" {
 				monitors = append(monitors, currentMonitor)
 			}
 			currentMonitor = Monitor{}
 
-			// Extract monitor name
 			re := regexp.MustCompile(`Monitor ([^\s]+)`)
 			matches := re.FindStringSubmatch(line)
 			if len(matches) > 1 {
@@ -190,7 +176,6 @@ func (md *MonitorDetector) parseHyprctlOutput(output string) ([]Monitor, error) 
 			}
 		}
 
-		// Resolution line: "2880x1920@120.00000 at 0x0" (note: no Hz suffix in newer Hyprland)
 		if utils.ContainsAll(line, "x", "@", " at ") {
 			re := regexp.MustCompile(`(\d+)x(\d+)@([\d.]+)\s+at\s+(\d+)x(\d+)`)
 			matches := re.FindStringSubmatch(line)
@@ -212,7 +197,6 @@ func (md *MonitorDetector) parseHyprctlOutput(output string) ([]Monitor, error) 
 			}
 		}
 
-		// Scale line: "scale: 1.67" or "scale: 2.00"
 		if strings.Contains(line, "scale:") {
 			re := regexp.MustCompile(`scale:\s*([\d.]+)`)
 			matches := re.FindStringSubmatch(line)
@@ -226,7 +210,6 @@ func (md *MonitorDetector) parseHyprctlOutput(output string) ([]Monitor, error) 
 			}
 		}
 
-		// Make line: "make: BOE"
 		if strings.HasPrefix(line, "make:") {
 			parts := strings.SplitN(line, ":", 2)
 			if len(parts) > 1 {
@@ -237,7 +220,6 @@ func (md *MonitorDetector) parseHyprctlOutput(output string) ([]Monitor, error) 
 			}
 		}
 
-		// Model line: "model: NE135A1M-NY1"
 		if strings.HasPrefix(line, "model:") {
 			parts := strings.SplitN(line, ":", 2)
 			if len(parts) > 1 {
@@ -249,12 +231,10 @@ func (md *MonitorDetector) parseHyprctlOutput(output string) ([]Monitor, error) 
 		}
 	}
 
-	// Add the last monitor
 	if currentMonitor.Name != "" {
 		monitors = append(monitors, currentMonitor)
 	}
 
-	// Set the first monitor as primary if none specified
 	if len(monitors) > 0 {
 		monitors[0].IsPrimary = true
 	}
@@ -262,7 +242,6 @@ func (md *MonitorDetector) parseHyprctlOutput(output string) ([]Monitor, error) 
 	return monitors, nil
 }
 
-// parseWlrRandrOutput parses the output from wlr-randr
 func (md *MonitorDetector) parseWlrRandrOutput(output string) ([]Monitor, error) {
 	var monitors []Monitor
 	lines := strings.Split(output, "\n")
@@ -271,7 +250,6 @@ func (md *MonitorDetector) parseWlrRandrOutput(output string) ([]Monitor, error)
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
 
-		// Monitor line format varies, try to detect monitor names
 		if !strings.HasPrefix(line, " ") && strings.Contains(line, " ") {
 			if currentMonitor.Name != "" {
 				monitors = append(monitors, currentMonitor)
@@ -284,7 +262,6 @@ func (md *MonitorDetector) parseWlrRandrOutput(output string) ([]Monitor, error)
 			}
 		}
 
-		// Look for resolution and refresh rate
 		if utils.ContainsAny(line, "Hz", "*") && strings.Contains(line, "x") {
 			re := regexp.MustCompile(`(\d+)x(\d+).*?([\d.]+)\s*Hz`)
 			matches := re.FindStringSubmatch(line)
@@ -293,17 +270,15 @@ func (md *MonitorDetector) parseWlrRandrOutput(output string) ([]Monitor, error)
 				currentMonitor.Height = utils.ExtractInt(matches[2], 0)
 				currentMonitor.RefreshRate = utils.ExtractFloat64(matches[3], 60.0)
 				currentMonitor.IsActive = strings.Contains(line, "*")
-				currentMonitor.Scale = 1.0 // Default scale
+				currentMonitor.Scale = 1.0
 			}
 		}
 	}
 
-	// Add the last monitor
 	if currentMonitor.Name != "" {
 		monitors = append(monitors, currentMonitor)
 	}
 
-	// Set the first active monitor as primary
 	for i := range monitors {
 		if monitors[i].IsActive {
 			monitors[i].IsPrimary = true
@@ -314,26 +289,22 @@ func (md *MonitorDetector) parseWlrRandrOutput(output string) ([]Monitor, error)
 	return monitors, nil
 }
 
-// commandExists checks if a command is available in PATH
 func (md *MonitorDetector) commandExists(command string) bool {
 	_, err := exec.LookPath(command)
 	return err == nil
 }
 
-// ScalingManager handles scaling recommendations and configuration
 type ScalingManager struct{}
 
-// NewScalingManager creates a new scaling manager
 func NewScalingManager() *ScalingManager {
 	return &ScalingManager{}
 }
 
-// ScalingOption represents a scaling recommendation with detailed information
 type ScalingOption struct {
 	MonitorScale    float64
-	GTKScale        int     // GTK only supports integer scaling
-	FontDPI         int     // Xft.dpi setting (base 96)
-	FontScale       float64 // Additional font scaling
+	GTKScale        int
+	FontDPI         int
+	FontScale       float64
 	DisplayName     string
 	Description     string
 	Reasoning       string
@@ -342,23 +313,21 @@ type ScalingOption struct {
 	EffectiveHeight int
 }
 
-// GetIntelligentScalingOptions returns research-based scaling recommendations
 func (sm *ScalingManager) GetIntelligentScalingOptions(monitor Monitor) []ScalingOption {
 	pixelCount := monitor.Width * monitor.Height
 
 	var options []ScalingOption
 
-	// Base calculations for different scenarios
 	baseWidth := monitor.Width
 	baseHeight := monitor.Height
 
 	switch {
-	case pixelCount >= 8294400: // 4K+ (3840x2160+)
+	case pixelCount >= 8294400:
 		options = []ScalingOption{
 			{
 				MonitorScale:    2.0,
 				GTKScale:        2,
-				FontDPI:         192, // 96 * 2
+				FontDPI:         192,
 				FontScale:       1.0,
 				DisplayName:     "2x Perfect",
 				Description:     "Sharp 4K experience with crisp text",
@@ -370,7 +339,7 @@ func (sm *ScalingManager) GetIntelligentScalingOptions(monitor Monitor) []Scalin
 			{
 				MonitorScale:    1.5,
 				GTKScale:        1,
-				FontDPI:         144, // 96 * 1.5
+				FontDPI:         144,
 				FontScale:       1.5,
 				DisplayName:     "1.5x Balanced",
 				Description:     "More screen space with readable text",
@@ -382,7 +351,7 @@ func (sm *ScalingManager) GetIntelligentScalingOptions(monitor Monitor) []Scalin
 			{
 				MonitorScale:    1.25,
 				GTKScale:        1,
-				FontDPI:         120, // 96 * 1.25
+				FontDPI:         120,
 				FontScale:       1.25,
 				DisplayName:     "1.25x Maximum Space",
 				Description:     "Maximum usable space with slight text scaling",
@@ -405,12 +374,12 @@ func (sm *ScalingManager) GetIntelligentScalingOptions(monitor Monitor) []Scalin
 			},
 		}
 
-	case pixelCount >= 5000000: // High-DPI displays like Framework 13 (2880x1920), MacBook Pro 13", etc.
+	case pixelCount >= 5000000:
 		options = []ScalingOption{
 			{
 				MonitorScale:    2.0,
 				GTKScale:        2,
-				FontDPI:         192, // 96 * 2
+				FontDPI:         192,
 				FontScale:       1.0,
 				DisplayName:     "2x Recommended",
 				Description:     "Perfect for high-DPI laptop displays",
@@ -422,7 +391,7 @@ func (sm *ScalingManager) GetIntelligentScalingOptions(monitor Monitor) []Scalin
 			{
 				MonitorScale:    1.66667,
 				GTKScale:        2,
-				FontDPI:         160, // 96 * 1.66667
+				FontDPI:         160,
 				FontScale:       1.0,
 				DisplayName:     "1.67x More Space",
 				Description:     "More screen space while staying readable",
@@ -434,7 +403,7 @@ func (sm *ScalingManager) GetIntelligentScalingOptions(monitor Monitor) []Scalin
 			{
 				MonitorScale:    1.33333,
 				GTKScale:        1,
-				FontDPI:         128, // 96 * 1.33333
+				FontDPI:         128,
 				FontScale:       1.33,
 				DisplayName:     "1.33x Maximum Space",
 				Description:     "Maximum usable space with clean scaling",
@@ -457,7 +426,7 @@ func (sm *ScalingManager) GetIntelligentScalingOptions(monitor Monitor) []Scalin
 			},
 		}
 
-	case pixelCount >= 3686400: // 1440p (2560x1440)
+	case pixelCount >= 3686400:
 		options = []ScalingOption{
 			{
 				MonitorScale:    1.0,
@@ -497,7 +466,7 @@ func (sm *ScalingManager) GetIntelligentScalingOptions(monitor Monitor) []Scalin
 			},
 		}
 
-	case pixelCount >= 2073600: // 1080p (1920x1080)
+	case pixelCount >= 2073600:
 		options = []ScalingOption{
 			{
 				MonitorScale:    1.0,
@@ -525,7 +494,7 @@ func (sm *ScalingManager) GetIntelligentScalingOptions(monitor Monitor) []Scalin
 			},
 		}
 
-	default: // Lower resolutions
+	default:
 		options = []ScalingOption{
 			{
 				MonitorScale:    1.0,
@@ -545,11 +514,9 @@ func (sm *ScalingManager) GetIntelligentScalingOptions(monitor Monitor) []Scalin
 	return options
 }
 
-// GetRecommendedScale returns the single best scaling recommendation (legacy function)
 func (sm *ScalingManager) GetRecommendedScale(monitor Monitor) ScalingRecommendation {
 	options := sm.GetIntelligentScalingOptions(monitor)
 
-	// Find the recommended option
 	for _, option := range options {
 		if option.IsRecommended {
 			return ScalingRecommendation{
@@ -562,7 +529,6 @@ func (sm *ScalingManager) GetRecommendedScale(monitor Monitor) ScalingRecommenda
 		}
 	}
 
-	// Fallback to first option
 	if len(options) > 0 {
 		first := options[0]
 		return ScalingRecommendation{
@@ -574,7 +540,6 @@ func (sm *ScalingManager) GetRecommendedScale(monitor Monitor) ScalingRecommenda
 		}
 	}
 
-	// Ultimate fallback
 	return ScalingRecommendation{
 		MonitorScale:    1.0,
 		FontScale:       1.0,
@@ -584,7 +549,6 @@ func (sm *ScalingManager) GetRecommendedScale(monitor Monitor) ScalingRecommenda
 	}
 }
 
-// ScalingRecommendation contains scaling recommendations for a monitor
 type ScalingRecommendation struct {
 	MonitorScale    float64
 	FontScale       float64
@@ -593,49 +557,49 @@ type ScalingRecommendation struct {
 	Reasoning       string
 }
 
-// ConfigManager handles configuration file management
 type ConfigManager struct {
 	isDemoMode bool
 }
 
-// NewConfigManager creates a new configuration manager
 func NewConfigManager(demoMode bool) *ConfigManager {
 	return &ConfigManager{
 		isDemoMode: demoMode,
 	}
 }
 
-// ApplyMonitorScale applies monitor scaling to Hyprland configuration
 func (cm *ConfigManager) ApplyMonitorScale(monitor Monitor, scale float64) error {
 	if cm.isDemoMode {
-		// In demo mode, just log what would be done
 		fmt.Printf("Demo: Would apply monitor scale %.2fx to %s\n", scale, monitor.Name)
 		return nil
 	}
 
-	// Check if we're in a Hyprland environment
 	if os.Getenv("HYPRLAND_INSTANCE_SIGNATURE") == "" {
 		return fmt.Errorf("not running in Hyprland environment")
 	}
 
-	// Validate scale - Hyprland prefers clean divisors
 	validatedScale := cm.validateHyprlandScale(scale)
 	if validatedScale != scale {
 		fmt.Printf("Adjusted scale from %.3f to %.3f for Hyprland compatibility\n", scale, validatedScale)
 	}
 
-	// Apply scale using hyprctl
-	cmd := exec.Command("hyprctl", "keyword", "monitor",
-		fmt.Sprintf("%s,preferred,auto,%.5f", monitor.Name, validatedScale))
+	monitorName := strings.ReplaceAll(monitor.Name, " ", "_")
+	monitorName = strings.ReplaceAll(monitorName, ";", "")
+	monitorName = strings.ReplaceAll(monitorName, "&", "")
+	monitorName = strings.ReplaceAll(monitorName, "|", "")
+	monitorName = strings.ReplaceAll(monitorName, "`", "")
+	monitorName = strings.ReplaceAll(monitorName, "$", "")
+	monitorName = strings.ReplaceAll(monitorName, "(", "")
+	monitorName = strings.ReplaceAll(monitorName, ")", "")
+	monitorName = strings.ReplaceAll(monitorName, "'", "")
+	monitorName = strings.ReplaceAll(monitorName, "\"", "")
 
-	// Capture both stdout and stderr to handle errors properly
+	cmd := exec.Command("hyprctl", "keyword", "monitor", fmt.Sprintf("%s,preferred,auto,%.5f", monitorName, validatedScale)) // nosec G204
+
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		// Don't show the raw hyprctl error to user, return a clean error
 		return fmt.Errorf("failed to apply scaling: Hyprland rejected scale %.3f", validatedScale)
 	}
 
-	// Check if output contains any warnings/errors
 	outputStr := string(output)
 	if strings.Contains(outputStr, "invalid scale") || strings.Contains(outputStr, "failed to find clean divisor") {
 		return fmt.Errorf("hyprland rejected scale %.3f - try a different scaling value", validatedScale)
@@ -644,23 +608,20 @@ func (cm *ConfigManager) ApplyMonitorScale(monitor Monitor, scale float64) error
 	return nil
 }
 
-// validateHyprlandScale ensures the scale value is compatible with Hyprland
 func (cm *ConfigManager) validateHyprlandScale(scale float64) float64 {
-	// Hyprland prefers these clean divisor scales
 	hyprlandScales := []float64{
-		1.0,     // 1x
-		1.25,    // 5/4
-		1.33333, // 4/3
-		1.5,     // 3/2
-		1.66667, // 5/3
-		1.75,    // 7/4
-		2.0,     // 2x
-		2.25,    // 9/4
-		2.5,     // 5/2
-		3.0,     // 3x
+		1.0,
+		1.25,
+		1.33333,
+		1.5,
+		1.66667,
+		1.75,
+		2.0,
+		2.25,
+		2.5,
+		3.0,
 	}
 
-	// Find the closest valid scale
 	closest := hyprlandScales[0]
 	minDiff := math.Abs(scale - closest)
 
@@ -675,36 +636,32 @@ func (cm *ConfigManager) validateHyprlandScale(scale float64) float64 {
 	return closest
 }
 
-// ApplyGTKScale applies GTK scaling (integer only, as GTK3 doesn't support fractional)
 func (cm *ConfigManager) ApplyGTKScale(scale int) error {
 	if cm.isDemoMode {
 		fmt.Printf("Demo: Would apply GTK scale %dx system-wide\n", scale)
 		return nil
 	}
 
-	// Set GDK_SCALE environment variable
-	// This requires logout/login to take full effect
-	os.Setenv("GDK_SCALE", fmt.Sprintf("%d", scale))
+	if err := os.Setenv("GDK_SCALE", fmt.Sprintf("%d", scale)); err != nil {
+		return fmt.Errorf("failed to set GDK_SCALE: %w", err)
+	}
 
-	// TODO: Could write to ~/.profile or similar for persistence
 	return nil
 }
 
-// ApplyFontDPI applies font DPI scaling via Xft.dpi
 func (cm *ConfigManager) ApplyFontDPI(dpi int) error {
 	if cm.isDemoMode {
 		fmt.Printf("Demo: Would set Xft.dpi to %d in ~/.Xresources\n", dpi)
 		return nil
 	}
 
-	// TODO: Actually implement .Xresources updating
-	// For now, just set environment variable for immediate effect
-	os.Setenv("XFT_DPI", fmt.Sprintf("%d", dpi))
+	if err := os.Setenv("XFT_DPI", fmt.Sprintf("%d", dpi)); err != nil {
+		return fmt.Errorf("failed to set XFT_DPI: %w", err)
+	}
 
 	return nil
 }
 
-// ApplyCompleteScalingOption applies a complete scaling configuration
 func (cm *ConfigManager) ApplyCompleteScalingOption(monitor Monitor, option ScalingOption) error {
 	if cm.isDemoMode {
 		fmt.Printf("Demo: Would apply complete scaling option '%s':\n", option.DisplayName)
@@ -715,17 +672,14 @@ func (cm *ConfigManager) ApplyCompleteScalingOption(monitor Monitor, option Scal
 		return nil
 	}
 
-	// Apply monitor scaling
 	if err := cm.ApplyMonitorScale(monitor, option.MonitorScale); err != nil {
 		return fmt.Errorf("failed to apply monitor scale: %w", err)
 	}
 
-	// Apply GTK scaling
 	if err := cm.ApplyGTKScale(option.GTKScale); err != nil {
 		return fmt.Errorf("failed to apply GTK scale: %w", err)
 	}
 
-	// Apply font DPI
 	if err := cm.ApplyFontDPI(option.FontDPI); err != nil {
 		return fmt.Errorf("failed to apply font DPI: %w", err)
 	}
@@ -733,7 +687,6 @@ func (cm *ConfigManager) ApplyCompleteScalingOption(monitor Monitor, option Scal
 	return nil
 }
 
-// GetScalingExplanations returns explanations for different scaling types
 func (cm *ConfigManager) GetScalingExplanations() map[string]string {
 	return map[string]string{
 		"monitor": "Changes the size of all UI elements rendered by the compositor. Applied immediately, affects everything.",

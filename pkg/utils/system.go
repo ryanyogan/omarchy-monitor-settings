@@ -6,13 +6,11 @@ import (
 	"strings"
 )
 
-// CommandExists checks if a command exists in PATH.
 func CommandExists(command string) bool {
 	_, err := exec.LookPath(command)
 	return err == nil
 }
 
-// ParseResolution parses a resolution string like "1920x1080".
 func ParseResolution(resStr string) (int, int) {
 	parts := strings.Split(resStr, "x")
 	if len(parts) != 2 {
@@ -29,10 +27,9 @@ func ParseResolution(resStr string) (int, int) {
 	return width, height
 }
 
-// ParseRefreshRate parses refresh rate from string like "60.00".
 func ParseRefreshRate(refreshStr string) float64 {
 	if rate, err := strconv.ParseFloat(refreshStr, 64); err == nil {
 		return rate
 	}
-	return 60.0 // default fallback
+	return 60.0
 }

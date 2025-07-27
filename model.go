@@ -46,7 +46,7 @@ func getTerminalThemeInfo() string {
 		profileName = "Basic"
 	}
 
-	theme := "Unknown"
+	var theme string
 	if isDark {
 		theme = "Dark"
 	} else {
@@ -54,10 +54,6 @@ func getTerminalThemeInfo() string {
 	}
 
 	return fmt.Sprintf("Terminal Adaptive (%s, %s)", profileName, theme)
-}
-
-func getValidHyprlandScales() []float64 {
-	return types.ValidHyprlandScales
 }
 
 type AppMode int
@@ -125,11 +121,9 @@ type Model struct {
 
 	services *AppServices
 
-	// Cache expensive operations
 	cachedTerminalTheme string
 	cachedCommandStatus map[string]bool
 
-	// UI styles
 	headerStyle     lipgloss.Style
 	footerStyle     lipgloss.Style
 	titleStyle      lipgloss.Style
@@ -172,16 +166,13 @@ func NewModelWithServices(services *AppServices) Model {
 		manualFontDPI:         types.BaseDPI,
 		selectedManualControl: 0,
 
-		// Initialize cache
 		cachedCommandStatus: make(map[string]bool),
 	}
 
 	m.initStyles()
 
-	// Cache expensive operations once at startup
 	m.cachedTerminalTheme = getTerminalThemeInfo()
 
-	// Cache command availability
 	commands := []string{"hyprctl", "wlr-randr"}
 	for _, cmd := range commands {
 		m.cachedCommandStatus[cmd] = utils.CommandExists(cmd)
@@ -414,11 +405,11 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		} else if m.mode == ModeConfirmation {
 			switch m.confirmationAction {
 			case ConfirmSmartScaling:
-				m.services.ConfigManager.ApplyCompleteScalingOption(m.pendingMonitor, m.pendingOption)
+				_ = m.services.ConfigManager.ApplyCompleteScalingOption(m.pendingMonitor, m.pendingOption)
 			case ConfirmManualScaling:
-				m.services.ConfigManager.ApplyMonitorScale(m.pendingMonitor, m.manualMonitorScale)
-				m.services.ConfigManager.ApplyGTKScale(m.manualGTKScale)
-				m.services.ConfigManager.ApplyFontDPI(m.manualFontDPI)
+				_ = m.services.ConfigManager.ApplyMonitorScale(m.pendingMonitor, m.manualMonitorScale)
+				_ = m.services.ConfigManager.ApplyGTKScale(m.manualGTKScale)
+				_ = m.services.ConfigManager.ApplyFontDPI(m.manualFontDPI)
 			}
 			m.confirmationAction = ConfirmNone
 			m.mode = ModeDashboard
@@ -804,7 +795,6 @@ func (m Model) renderMonitorSelection(contentHeight int) string {
 			statusStyle = lipgloss.NewStyle().Background(colorComment).Foreground(colorBackground).Bold(true).Padding(0, 1)
 		}
 
-		// Beautiful monitor card
 		nameStyle := lipgloss.NewStyle().Foreground(color).Bold(true)
 		detailStyle := lipgloss.NewStyle().Foreground(colorSubtle)
 
@@ -831,7 +821,6 @@ func (m Model) renderMonitorSelection(contentHeight int) string {
 		content = append(content, "")
 	}
 
-	// Instructions
 	instructions := []string{
 		lipgloss.NewStyle().Foreground(colorYellow).Render("⏎") +
 			lipgloss.NewStyle().Foreground(colorSubtle).Render(" Select monitor and return to dashboard"),
@@ -839,7 +828,6 @@ func (m Model) renderMonitorSelection(contentHeight int) string {
 			lipgloss.NewStyle().Foreground(colorSubtle).Render(" Return to main menu"),
 	}
 
-	// Add helpful note
 	note := lipgloss.NewStyle().
 		Foreground(colorComment).
 		Italic(true).
@@ -850,7 +838,6 @@ func (m Model) renderMonitorSelection(contentHeight int) string {
 	content = append(content, "")
 	content = append(content, note)
 
-	// Beautiful container
 	return lipgloss.NewStyle().
 		Width(m.width - 8).
 		Height(contentHeight - 2).
@@ -864,7 +851,6 @@ func (m Model) renderMonitorSelection(contentHeight int) string {
 func (m Model) renderScalingOptions(contentHeight int) string {
 	var content []string
 
-	// Award-winning smart scaling screen
 	title := lipgloss.NewStyle().
 		Foreground(colorGreen).
 		Bold(true).
@@ -876,7 +862,6 @@ func (m Model) renderScalingOptions(contentHeight int) string {
 	if len(m.monitors) > 0 && m.selectedMonitor < len(m.monitors) {
 		selectedMonitor := m.monitors[m.selectedMonitor]
 
-		// Monitor info card - simplified
 		monitorInfo := fmt.Sprintf("%s %s %s - %dx%d@%.0fHz",
 			selectedMonitor.Name, selectedMonitor.Make, selectedMonitor.Model,
 			selectedMonitor.Width, selectedMonitor.Height, selectedMonitor.RefreshRate)
@@ -892,23 +877,19 @@ func (m Model) renderScalingOptions(contentHeight int) string {
 		content = append(content, monitorCard)
 		content = append(content, "")
 
-		// Smart recommendations - simplified layout
 		recTitle := lipgloss.NewStyle().Foreground(colorCyan).Bold(true).Render("🎯 Available Options")
 		content = append(content, recTitle)
 		content = append(content, "")
 
-		// Display scaling options in a simpler format
 		for i, option := range m.scalingOptions {
 			var line string
 
-			// Selection indicator and recommended badge
 			if i == m.selectedScalingOpt {
 				line = lipgloss.NewStyle().Foreground(colorBlue).Bold(true).Render("▶ ")
 			} else {
 				line = "  "
 			}
 
-			// Option name with recommended badge
 			optionName := option.DisplayName
 			if option.IsRecommended {
 				optionName += " [RECOMMENDED]"
@@ -922,24 +903,20 @@ func (m Model) renderScalingOptions(contentHeight int) string {
 
 			content = append(content, line)
 
-			// Description
 			description := fmt.Sprintf("    %s", option.Description)
 			content = append(content, lipgloss.NewStyle().Foreground(colorSubtle).Render(description))
 
-			// Technical details
 			details := fmt.Sprintf("    Monitor: %.1fx • GTK: %dx • Font DPI: %d • Result: %dx%d",
 				option.MonitorScale, option.GTKScale, option.FontDPI,
 				option.EffectiveWidth, option.EffectiveHeight)
 			content = append(content, lipgloss.NewStyle().Foreground(colorComment).Render(details))
 
-			// Reasoning
 			reasoning := fmt.Sprintf("    💡 %s", option.Reasoning)
 			content = append(content, lipgloss.NewStyle().Foreground(colorComment).Italic(true).Render(reasoning))
 
-			content = append(content, "") // Space between options
+			content = append(content, "")
 		}
 
-		// What each setting does - simplified
 		content = append(content, "")
 		explainTitle := lipgloss.NewStyle().Foreground(colorMagenta).Bold(true).Render("📚 What Each Setting Does")
 		content = append(content, explainTitle)
@@ -963,7 +940,6 @@ func (m Model) renderScalingOptions(contentHeight int) string {
 		}
 	}
 
-	// Instructions
 	content = append(content, "")
 	instructions := []string{
 		lipgloss.NewStyle().Foreground(colorGreen).Render("↑↓") +
@@ -978,7 +954,6 @@ func (m Model) renderScalingOptions(contentHeight int) string {
 
 	content = append(content, strings.Join(instructions, "  "))
 
-	// Simple container
 	return lipgloss.NewStyle().
 		Width(m.width - 8).
 		Height(contentHeight - 2).
@@ -992,7 +967,6 @@ func (m Model) renderScalingOptions(contentHeight int) string {
 func (m Model) renderManualScaling(contentHeight int) string {
 	var content []string
 
-	// Award-winning manual scaling screen
 	title := lipgloss.NewStyle().
 		Foreground(colorMagenta).
 		Bold(true).
@@ -1001,7 +975,6 @@ func (m Model) renderManualScaling(contentHeight int) string {
 	content = append(content, title)
 	content = append(content, "")
 
-	// Check bounds to prevent crashes
 	if len(m.monitors) == 0 {
 		content = append(content, lipgloss.NewStyle().
 			Foreground(colorRed).
@@ -1032,7 +1005,6 @@ func (m Model) renderManualScaling(contentHeight int) string {
 
 	selectedMonitor := m.monitors[m.selectedMonitor]
 
-	// Monitor info card - simplified
 	monitorInfo := fmt.Sprintf("%s %s %s - %dx%d@%.0fHz (Current: %.2fx)",
 		selectedMonitor.Name, selectedMonitor.Make, selectedMonitor.Model,
 		selectedMonitor.Width, selectedMonitor.Height, selectedMonitor.RefreshRate, selectedMonitor.Scale)
@@ -1048,12 +1020,10 @@ func (m Model) renderManualScaling(contentHeight int) string {
 	content = append(content, monitorCard)
 	content = append(content, "")
 
-	// Manual controls - simplified layout with selection indicators
 	controlsTitle := lipgloss.NewStyle().Foreground(colorBlue).Bold(true).Render("⚙️ Scaling Controls")
 	content = append(content, controlsTitle)
 	content = append(content, "")
 
-	// Monitor Scale Control
 	monitorScaleStyle := lipgloss.NewStyle().Foreground(colorBlue).Bold(true)
 	monitorScaleValueStyle := lipgloss.NewStyle().Foreground(colorGreen)
 	monitorScaleDescStyle := lipgloss.NewStyle().Foreground(colorSubtle)
@@ -1071,7 +1041,6 @@ func (m Model) renderManualScaling(contentHeight int) string {
 	content = append(content, monitorScaleDescStyle.Render("   Scales everything immediately. Works with all apps."))
 	content = append(content, "")
 
-	// GTK Scale Control
 	gtkScaleStyle := lipgloss.NewStyle().Foreground(colorCyan).Bold(true)
 	gtkScaleValueStyle := lipgloss.NewStyle().Foreground(colorGreen)
 	gtkScaleDescStyle := lipgloss.NewStyle().Foreground(colorSubtle)
@@ -1089,7 +1058,6 @@ func (m Model) renderManualScaling(contentHeight int) string {
 	content = append(content, gtkScaleDescStyle.Render("   Scales GTK apps (most Linux apps). Requires logout."))
 	content = append(content, "")
 
-	// Font DPI Control
 	fontDPIStyle := lipgloss.NewStyle().Foreground(colorYellow).Bold(true)
 	fontDPIValueStyle := lipgloss.NewStyle().Foreground(colorGreen)
 	fontDPIDescStyle := lipgloss.NewStyle().Foreground(colorSubtle)
@@ -1107,7 +1075,6 @@ func (m Model) renderManualScaling(contentHeight int) string {
 	content = append(content, fontDPIDescStyle.Render("   Fine-grained text scaling. Works with most applications."))
 	content = append(content, "")
 
-	// Results preview
 	effectiveWidth, effectiveHeight := utils.CalculateEffectiveResolution(selectedMonitor.Width, selectedMonitor.Height, m.manualMonitorScale)
 	screenRealEstate := utils.CalculateScreenRealEstate(m.manualMonitorScale)
 	fontMultiplier := utils.CalculateFontMultiplier(m.manualFontDPI, types.BaseDPI)
@@ -1126,7 +1093,6 @@ func (m Model) renderManualScaling(contentHeight int) string {
 		content = append(content, demoNotice)
 	}
 
-	// Instructions
 	content = append(content, "")
 	instructions := []string{
 		lipgloss.NewStyle().Foreground(colorGreen).Render("↑↓") +
@@ -1141,7 +1107,6 @@ func (m Model) renderManualScaling(contentHeight int) string {
 
 	content = append(content, strings.Join(instructions, "  "))
 
-	// Simple container
 	return lipgloss.NewStyle().
 		Width(m.width - 8).
 		Height(contentHeight - 2).
@@ -1155,7 +1120,6 @@ func (m Model) renderManualScaling(contentHeight int) string {
 func (m Model) renderSettings(contentHeight int) string {
 	var content []string
 
-	// Award-winning settings screen
 	title := lipgloss.NewStyle().
 		Foreground(colorMagenta).
 		Bold(true).
@@ -1164,12 +1128,10 @@ func (m Model) renderSettings(contentHeight int) string {
 	content = append(content, title)
 	content = append(content, "")
 
-	// Application info section - clean and consistent
 	appTitle := lipgloss.NewStyle().Foreground(colorBlue).Bold(true).Render("📱 Application Info")
 	content = append(content, appTitle)
 	content = append(content, "")
 
-	// Use cached terminal theme info or generate it once
 	themeInfo := m.cachedTerminalTheme
 	if themeInfo == "" {
 		themeInfo = getTerminalThemeInfo()
@@ -1192,19 +1154,16 @@ func (m Model) renderSettings(contentHeight int) string {
 
 	content = append(content, "")
 
-	// Detection methods section - clean and consistent
 	detectionTitle := lipgloss.NewStyle().Foreground(colorCyan).Bold(true).Render("🔍 Detection Methods")
 	content = append(content, detectionTitle)
 	content = append(content, "")
 
-	// Use cached command status or check once
 	commands := []string{"hyprctl", "wlr-randr"}
 	names := []string{"Hyprctl", "wlr-randr"}
 
 	for i, cmd := range commands {
 		var status string
 
-		// Use cached status if available
 		if m.cachedCommandStatus != nil {
 			if available, exists := m.cachedCommandStatus[cmd]; exists {
 				if available {
@@ -1215,7 +1174,6 @@ func (m Model) renderSettings(contentHeight int) string {
 			}
 		}
 
-		// Fallback to real check if not cached
 		if status == "" {
 			if utils.CommandExists(cmd) {
 				status = lipgloss.NewStyle().Foreground(colorGreen).Render("✓ Available")
@@ -1230,7 +1188,6 @@ func (m Model) renderSettings(contentHeight int) string {
 
 	content = append(content, "")
 
-	// Configuration section - clean and consistent (FIXED)
 	configTitle := lipgloss.NewStyle().Foreground(colorYellow).Bold(true).Render("⚙️ Configuration")
 	content = append(content, configTitle)
 	content = append(content, "")
@@ -1247,14 +1204,12 @@ func (m Model) renderSettings(contentHeight int) string {
 
 	content = append(content, "")
 
-	// Footer message
 	footer := lipgloss.NewStyle().
 		Foreground(colorComment).
 		Italic(true).
 		Render("💡 Press Esc to return to the main menu")
 	content = append(content, footer)
 
-	// Simple, clean container - consistent with other screens
 	return lipgloss.NewStyle().
 		Width(m.width - 8).
 		Height(contentHeight - 2).
@@ -1265,11 +1220,9 @@ func (m Model) renderSettings(contentHeight int) string {
 		Render(strings.Join(content, "\n"))
 }
 
-// renderConfirmation renders the confirmation dialog for scaling operations
 func (m Model) renderConfirmation(contentHeight int) string {
 	var content []string
 
-	// Title with warning icon
 	title := lipgloss.NewStyle().
 		Foreground(colorYellow).
 		Bold(true).
@@ -1278,7 +1231,6 @@ func (m Model) renderConfirmation(contentHeight int) string {
 	content = append(content, title)
 	content = append(content, "")
 
-	// Warning message
 	warningStyle := lipgloss.NewStyle().
 		Foreground(colorRed).
 		Bold(true)
@@ -1287,7 +1239,6 @@ func (m Model) renderConfirmation(contentHeight int) string {
 	content = append(content, warning)
 	content = append(content, "")
 
-	// Explanation
 	explanationLines := []string{
 		"Applying these changes will:",
 		"",
@@ -1310,11 +1261,9 @@ func (m Model) renderConfirmation(contentHeight int) string {
 
 	content = append(content, "")
 
-	// Show what will be applied
 	monitor := m.pendingMonitor
 	option := m.pendingOption
 
-	// Monitor info
 	monitorTitle := lipgloss.NewStyle().Foreground(colorBlue).Bold(true).Render("📱 Target Monitor")
 	content = append(content, monitorTitle)
 	content = append(content, "")
@@ -1324,7 +1273,6 @@ func (m Model) renderConfirmation(contentHeight int) string {
 	content = append(content, lipgloss.NewStyle().Foreground(colorSubtle).Render(monitorInfo))
 	content = append(content, "")
 
-	// Settings that will be applied
 	settingsTitle := lipgloss.NewStyle().Foreground(colorCyan).Bold(true).Render("🎯 Settings to Apply")
 	content = append(content, settingsTitle)
 	content = append(content, "")
@@ -1341,7 +1289,6 @@ func (m Model) renderConfirmation(contentHeight int) string {
 
 	content = append(content, "")
 
-	// Action name
 	actionName := "Smart Scaling"
 	if m.confirmationAction == ConfirmManualScaling {
 		actionName = "Manual Scaling"
@@ -1353,7 +1300,6 @@ func (m Model) renderConfirmation(contentHeight int) string {
 	content = append(content, actionInfo)
 	content = append(content, "")
 
-	// Instructions
 	instructionsStyle := lipgloss.NewStyle().
 		Foreground(colorComment).
 		Italic(true)
@@ -1368,7 +1314,6 @@ func (m Model) renderConfirmation(contentHeight int) string {
 		content = append(content, instructionsStyle.Render(instruction))
 	}
 
-	// Simple, clean container - consistent with other screens
 	return lipgloss.NewStyle().
 		Width(m.width - 8).
 		Height(contentHeight - 2).
@@ -1382,7 +1327,6 @@ func (m Model) renderConfirmation(contentHeight int) string {
 func (m Model) renderHelp(contentHeight int) string {
 	var content []string
 
-	// Award-winning help screen
 	title := lipgloss.NewStyle().
 		Foreground(colorYellow).
 		Bold(true).
@@ -1391,7 +1335,6 @@ func (m Model) renderHelp(contentHeight int) string {
 	content = append(content, title)
 	content = append(content, "")
 
-	// Navigation section - clean and consistent
 	navTitle := lipgloss.NewStyle().Foreground(colorGreen).Bold(true).Render("🎮 Navigation")
 	content = append(content, navTitle)
 	content = append(content, "")
@@ -1415,7 +1358,6 @@ func (m Model) renderHelp(contentHeight int) string {
 
 	content = append(content, "")
 
-	// Commands section - clean and consistent
 	cmdTitle := lipgloss.NewStyle().Foreground(colorBlue).Bold(true).Render("⌨️ Global Commands")
 	content = append(content, cmdTitle)
 	content = append(content, "")
@@ -1438,7 +1380,6 @@ func (m Model) renderHelp(contentHeight int) string {
 
 	content = append(content, "")
 
-	// Mode-specific controls
 	modeTitle := lipgloss.NewStyle().Foreground(colorCyan).Bold(true).Render("🎯 Mode-Specific Controls")
 	content = append(content, modeTitle)
 	content = append(content, "")
@@ -1458,7 +1399,6 @@ func (m Model) renderHelp(contentHeight int) string {
 
 	content = append(content, "")
 
-	// About section - clean and minimal
 	aboutTitle := lipgloss.NewStyle().Foreground(colorMagenta).Bold(true).Render("ℹ️ About")
 	content = append(content, aboutTitle)
 	content = append(content, "")
@@ -1476,14 +1416,12 @@ func (m Model) renderHelp(contentHeight int) string {
 
 	content = append(content, "")
 
-	// Footer message
 	footer := lipgloss.NewStyle().
 		Foreground(colorComment).
 		Italic(true).
 		Render("💡 Press Esc to return to the main menu")
 	content = append(content, footer)
 
-	// Simple, clean container - consistent with other screens
 	return lipgloss.NewStyle().
 		Width(m.width - 8).
 		Height(contentHeight - 2).

@@ -10,11 +10,9 @@ import (
 	"github.com/muesli/termenv"
 )
 
-// TestNewModel tests the NewModel function
 func TestNewModel(t *testing.T) {
 	model := NewModel()
 
-	// Test basic initialization
 	if model.mode != ModeDashboard {
 		t.Errorf("Expected ModeDashboard, got %v", model.mode)
 	}
@@ -38,7 +36,6 @@ func TestNewModel(t *testing.T) {
 	}
 }
 
-// TestModelInit tests the Init method
 func TestModelInit(t *testing.T) {
 	model := NewModel()
 	cmd := model.Init()
@@ -48,7 +45,6 @@ func TestModelInit(t *testing.T) {
 	}
 }
 
-// TestModelUpdate tests the Update method with various messages
 func TestModelUpdate(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -87,23 +83,19 @@ func TestModelUpdate(t *testing.T) {
 			model := NewModel()
 			updatedModel, cmd := model.Update(tt.msg)
 
-			// Type assert to access model fields
 			if model, ok := updatedModel.(Model); ok {
 				if model.mode != tt.expected {
 					t.Errorf("Expected mode %v, got %v", tt.expected, model.mode)
 				}
 			}
 
-			// Test that we can chain updates
 			if cmd != nil {
-				// This would normally execute the command
 				_ = cmd
 			}
 		})
 	}
 }
 
-// TestHandleKeyPress tests key press handling with table-driven tests
 func TestHandleKeyPress(t *testing.T) {
 	tests := []struct {
 		name           string
@@ -275,7 +267,6 @@ func TestHandleKeyPress(t *testing.T) {
 			model.mode = tt.initialMode
 			model.selectedOption = tt.initialOption
 
-			// Create key message
 			keyMsg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(tt.key)}
 			switch tt.key {
 			case "up":
@@ -307,7 +298,6 @@ func TestHandleKeyPress(t *testing.T) {
 
 			updatedModel, cmd := model.handleKeyPress(keyMsg)
 
-			// Type assert to access model fields
 			if model, ok := updatedModel.(Model); ok {
 				if model.mode != tt.expectedMode {
 					t.Errorf("Expected mode %v, got %v", tt.expectedMode, model.mode)
@@ -323,7 +313,6 @@ func TestHandleKeyPress(t *testing.T) {
 	}
 }
 
-// TestManualScalingControls tests manual scaling control interactions
 func TestManualScalingControls(t *testing.T) {
 	tests := []struct {
 		name                 string
@@ -420,7 +409,6 @@ func TestManualScalingControls(t *testing.T) {
 			model.manualGTKScale = tt.initialGTKScale
 			model.manualFontDPI = tt.initialFontDPI
 
-			// Create key message
 			keyMsg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(tt.key)}
 			switch tt.key {
 			case "up":
@@ -431,7 +419,6 @@ func TestManualScalingControls(t *testing.T) {
 
 			updatedModel, _ := model.handleKeyPress(keyMsg)
 
-			// Type assert to access model fields
 			if model, ok := updatedModel.(Model); ok {
 				if model.selectedManualControl != tt.expectedControl {
 					t.Errorf("Expected control %d, got %d", tt.expectedControl, model.selectedManualControl)
@@ -450,7 +437,6 @@ func TestManualScalingControls(t *testing.T) {
 	}
 }
 
-// TestModelView tests the View method with various terminal sizes
 func TestModelView(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -519,16 +505,13 @@ func TestModelView(t *testing.T) {
 	}
 }
 
-// TestScalingOptions tests scaling options functionality
 func TestScalingOptions(t *testing.T) {
 	model := NewModel()
 
-	// Ensure we have monitors
 	if len(model.monitors) == 0 {
 		t.Skip("No monitors available for testing")
 	}
 
-	// Test scaling options generation
 	scalingManager := NewScalingManager()
 	options := scalingManager.GetIntelligentScalingOptions(model.monitors[0])
 
@@ -536,7 +519,6 @@ func TestScalingOptions(t *testing.T) {
 		t.Error("Should have scaling options")
 	}
 
-	// Test that at least one option is recommended
 	hasRecommended := false
 	for _, option := range options {
 		if option.IsRecommended {
@@ -549,30 +531,24 @@ func TestScalingOptions(t *testing.T) {
 	}
 }
 
-// TestMonitorSelection tests monitor selection functionality
 func TestMonitorSelection(t *testing.T) {
 	model := NewModel()
 
-	// Ensure we have monitors
 	if len(model.monitors) == 0 {
 		t.Skip("No monitors available for testing")
 	}
 
-	// Test monitor selection navigation
 	model.mode = ModeMonitorSelection
 	model.selectedMonitor = 0
 
-	// Navigate down
 	keyMsg := tea.KeyMsg{Type: tea.KeyDown}
 	updatedModel, _ := model.handleKeyPress(keyMsg)
 
-	// Type assert to access model fields
 	if model, ok := updatedModel.(Model); ok {
 		if len(model.monitors) > 1 && model.selectedMonitor != 1 {
 			t.Errorf("Expected selectedMonitor 1, got %d", model.selectedMonitor)
 		}
 
-		// Navigate up
 		keyMsg = tea.KeyMsg{Type: tea.KeyUp}
 		updatedModel2, _ := model.handleKeyPress(keyMsg)
 
@@ -584,31 +560,25 @@ func TestMonitorSelection(t *testing.T) {
 	}
 }
 
-// TestConfirmationFlow tests the confirmation flow
 func TestConfirmationFlow(t *testing.T) {
 	model := NewModel()
 
-	// Ensure we have monitors
 	if len(model.monitors) == 0 {
 		t.Skip("No monitors available for testing")
 	}
 
-	// Set up for smart scaling confirmation
 	model.mode = ModeScalingOptions
 	model.selectedMonitor = 0
 	model.selectedScalingOpt = 0
 
-	// Select a scaling option
 	keyMsg := tea.KeyMsg{Type: tea.KeyEnter}
 	updatedModel, _ := model.handleKeyPress(keyMsg)
 
-	// Type assert to access model fields
 	if model, ok := updatedModel.(Model); ok {
 		if model.mode != ModeConfirmation {
 			t.Errorf("Expected ModeConfirmation, got %v", model.mode)
 		}
 
-		// Cancel confirmation
 		keyMsg = tea.KeyMsg{Type: tea.KeyEscape}
 		updatedModel2, _ := model.handleKeyPress(keyMsg)
 
@@ -620,7 +590,6 @@ func TestConfirmationFlow(t *testing.T) {
 	}
 }
 
-// TestEdgeCases tests various edge cases
 func TestEdgeCases(t *testing.T) {
 	tests := []struct {
 		name        string
@@ -642,7 +611,7 @@ func TestEdgeCases(t *testing.T) {
 			name: "invalid monitor selection",
 			setupModel: func() Model {
 				model := NewModel()
-				model.selectedMonitor = 999 // Invalid index
+				model.selectedMonitor = 999
 				return model
 			},
 			key:         "enter",
@@ -653,7 +622,7 @@ func TestEdgeCases(t *testing.T) {
 			setupModel: func() Model {
 				model := NewModel()
 				model.mode = ModeScalingOptions
-				model.selectedScalingOpt = 999 // Invalid index
+				model.selectedScalingOpt = 999
 				return model
 			},
 			key:         "enter",
@@ -665,7 +634,7 @@ func TestEdgeCases(t *testing.T) {
 				model := NewModel()
 				model.mode = ModeManualScaling
 				model.selectedManualControl = 0
-				model.manualMonitorScale = 0.1 // Very small value
+				model.manualMonitorScale = 0.1
 				return model
 			},
 			key:         "down",
@@ -677,7 +646,7 @@ func TestEdgeCases(t *testing.T) {
 				model := NewModel()
 				model.mode = ModeManualScaling
 				model.selectedManualControl = 1
-				model.manualGTKScale = 1 // Minimum value
+				model.manualGTKScale = 1
 				return model
 			},
 			key:         "down",
@@ -689,7 +658,7 @@ func TestEdgeCases(t *testing.T) {
 				model := NewModel()
 				model.mode = ModeManualScaling
 				model.selectedManualControl = 2
-				model.manualFontDPI = 72 // Minimum value
+				model.manualFontDPI = 72
 				return model
 			},
 			key:         "down",
@@ -707,7 +676,6 @@ func TestEdgeCases(t *testing.T) {
 
 			model := tt.setupModel()
 
-			// Create key message
 			keyMsg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(tt.key)}
 			switch tt.key {
 			case "enter":
@@ -716,47 +684,37 @@ func TestEdgeCases(t *testing.T) {
 				keyMsg.Type = tea.KeyDown
 			}
 
-			// This should not panic
 			updatedModel, _ := model.handleKeyPress(keyMsg)
 			_ = updatedModel
 		})
 	}
 }
 
-// TestPropertyBasedScaling tests scaling properties
 func TestPropertyBasedScaling(t *testing.T) {
-	// Property: Scaling values should always be positive
 	model := NewModel()
 	model.mode = ModeManualScaling
 
-	// Test monitor scale bounds
 	if model.manualMonitorScale <= 0 {
 		t.Error("Monitor scale should be positive")
 	}
 
-	// Test GTK scale bounds
 	if model.manualGTKScale <= 0 {
 		t.Error("GTK scale should be positive")
 	}
 
-	// Test font DPI bounds
 	if model.manualFontDPI <= 0 {
 		t.Error("Font DPI should be positive")
 	}
 
-	// Property: After increasing and decreasing, we should get back to original value
 	originalScale := model.manualMonitorScale
 
-	// Increase scale
 	keyMsg := tea.KeyMsg{Type: tea.KeyUp}
 	updatedModel, _ := model.handleKeyPress(keyMsg)
 
-	// Decrease scale - need to type assert first
 	if model, ok := updatedModel.(Model); ok {
 		keyMsg = tea.KeyMsg{Type: tea.KeyDown}
 		finalModel, _ := model.handleKeyPress(keyMsg)
 
-		// Type assert to access model fields
 		if finalModel, ok := finalModel.(Model); ok {
 			if finalModel.manualMonitorScale != originalScale {
 				t.Errorf("Scale should return to original value, got %f, expected %f",
@@ -766,7 +724,6 @@ func TestPropertyBasedScaling(t *testing.T) {
 	}
 }
 
-// TestTerminalSizeConstraints tests terminal size constraints
 func TestTerminalSizeConstraints(t *testing.T) {
 	tests := []struct {
 		name       string
@@ -834,7 +791,6 @@ func TestTerminalSizeConstraints(t *testing.T) {
 	}
 }
 
-// BenchmarkModelUpdate benchmarks the Update method
 func BenchmarkModelUpdate(b *testing.B) {
 	model := NewModel()
 	msg := tea.WindowSizeMsg{Width: 80, Height: 24}
@@ -846,7 +802,6 @@ func BenchmarkModelUpdate(b *testing.B) {
 	}
 }
 
-// BenchmarkModelView benchmarks the View method
 func BenchmarkModelView(b *testing.B) {
 	model := NewModel()
 	model.width = 80
@@ -860,7 +815,6 @@ func BenchmarkModelView(b *testing.B) {
 	}
 }
 
-// BenchmarkKeyPress benchmarks key press handling
 func BenchmarkKeyPress(b *testing.B) {
 	model := NewModel()
 	keyMsg := tea.KeyMsg{Type: tea.KeyDown}
@@ -872,27 +826,25 @@ func BenchmarkKeyPress(b *testing.B) {
 	}
 }
 
-// TestTerminalColorInheritance tests that the application correctly inherits terminal colors
 func TestTerminalColorInheritance(t *testing.T) {
 	t.Run("ANSI_color_definitions", func(t *testing.T) {
-		// Test that all color variables use ANSI color codes that adapt to terminal themes
 		testCases := []struct {
 			name     string
 			color    lipgloss.Color
 			expected string
 		}{
-			{"colorBackground", colorBackground, ""}, // Terminal default
-			{"colorSurface", colorSurface, "0"},      // ANSI black
-			{"colorFloat", colorFloat, "8"},          // ANSI bright black
-			{"colorForeground", colorForeground, ""}, // Terminal default
-			{"colorComment", colorComment, "8"},      // ANSI bright black
-			{"colorSubtle", colorSubtle, "7"},        // ANSI white
-			{"colorBlue", colorBlue, "4"},            // ANSI blue
-			{"colorCyan", colorCyan, "6"},            // ANSI cyan
-			{"colorGreen", colorGreen, "2"},          // ANSI green
-			{"colorYellow", colorYellow, "3"},        // ANSI yellow
-			{"colorRed", colorRed, "1"},              // ANSI red
-			{"colorMagenta", colorMagenta, "5"},      // ANSI magenta
+			{"colorBackground", colorBackground, ""},
+			{"colorSurface", colorSurface, "0"},
+			{"colorFloat", colorFloat, "8"},
+			{"colorForeground", colorForeground, ""},
+			{"colorComment", colorComment, "8"},
+			{"colorSubtle", colorSubtle, "7"},
+			{"colorBlue", colorBlue, "4"},
+			{"colorCyan", colorCyan, "6"},
+			{"colorGreen", colorGreen, "2"},
+			{"colorYellow", colorYellow, "3"},
+			{"colorRed", colorRed, "1"},
+			{"colorMagenta", colorMagenta, "5"},
 		}
 
 		for _, tc := range testCases {
@@ -906,15 +858,12 @@ func TestTerminalColorInheritance(t *testing.T) {
 	})
 
 	t.Run("terminal_theme_detection", func(t *testing.T) {
-		// Test the getTerminalThemeInfo function
 		themeInfo := getTerminalThemeInfo()
 
-		// Should contain "Terminal Adaptive" and additional info
 		if !strings.Contains(themeInfo, "Terminal Adaptive") {
 			t.Errorf("Expected theme info to contain 'Terminal Adaptive', got: %s", themeInfo)
 		}
 
-		// Should contain profile information
 		profiles := []string{"TrueColor", "256 Color", "16 Color", "Basic"}
 		hasProfile := false
 		for _, profile := range profiles {
@@ -927,7 +876,6 @@ func TestTerminalColorInheritance(t *testing.T) {
 			t.Errorf("Expected theme info to contain a color profile, got: %s", themeInfo)
 		}
 
-		// Should contain theme type
 		themes := []string{"Dark", "Light"}
 		hasTheme := false
 		for _, theme := range themes {
@@ -942,7 +890,6 @@ func TestTerminalColorInheritance(t *testing.T) {
 	})
 
 	t.Run("style_color_usage", func(t *testing.T) {
-		// Create a model and initialize styles
 		config := &AppConfig{
 			IsTestMode: true,
 		}
@@ -952,15 +899,10 @@ func TestTerminalColorInheritance(t *testing.T) {
 		m.height = 30
 		m.ready = true
 
-		// Test that styles are properly using terminal-adaptive colors
-		// Call View() to ensure width/height are used
 		_ = m.View()
 
-		// Check header style uses terminal colors
 		headerStyle := m.headerStyle
 
-		// We can't directly inspect the colors in lipgloss styles,
-		// but we can test that the styles render without errors
 		testText := "Test Header"
 		rendered := headerStyle.Render(testText)
 
@@ -968,7 +910,6 @@ func TestTerminalColorInheritance(t *testing.T) {
 			t.Error("Header style should render non-empty text")
 		}
 
-		// Test footer style
 		footerStyle := m.footerStyle
 		footerRendered := footerStyle.Render("Test Footer")
 
@@ -976,7 +917,6 @@ func TestTerminalColorInheritance(t *testing.T) {
 			t.Error("Footer style should render non-empty text")
 		}
 
-		// Test that title style uses colors
 		titleStyle := m.titleStyle
 		titleRendered := titleStyle.Render("Test Title")
 
@@ -986,11 +926,10 @@ func TestTerminalColorInheritance(t *testing.T) {
 	})
 
 	t.Run("color_adaptation_environments", func(t *testing.T) {
-		// Test color behavior in different terminal environments
 		testCases := []struct {
 			name     string
 			termVar  string
-			expected string // What we expect the terminal to support
+			expected string
 		}{
 			{"xterm_256color", "xterm-256color", "should support 256 colors"},
 			{"xterm_truecolor", "xterm-256color", "should support colors"},
@@ -1000,21 +939,17 @@ func TestTerminalColorInheritance(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
-				// Save original TERM
 				originalTerm := os.Getenv("TERM")
 				defer os.Setenv("TERM", originalTerm)
 
-				// Set test TERM
 				os.Setenv("TERM", tc.termVar)
 
-				// Test that getTerminalThemeInfo still works
 				themeInfo := getTerminalThemeInfo()
 
 				if themeInfo == "" {
 					t.Errorf("Theme info should not be empty for TERM=%s", tc.termVar)
 				}
 
-				// Should still contain "Terminal Adaptive"
 				if !strings.Contains(themeInfo, "Terminal Adaptive") {
 					t.Errorf("Theme info should contain 'Terminal Adaptive' for TERM=%s, got: %s", tc.termVar, themeInfo)
 				}
@@ -1023,7 +958,6 @@ func TestTerminalColorInheritance(t *testing.T) {
 	})
 
 	t.Run("color_consistency", func(t *testing.T) {
-		// Test that colors are consistent across all rendering functions
 		config := &AppConfig{
 			IsTestMode: true,
 		}
@@ -1033,7 +967,6 @@ func TestTerminalColorInheritance(t *testing.T) {
 		m.height = 30
 		m.ready = true
 
-		// Test all rendering methods to ensure they use consistent colors
 		renderMethods := []struct {
 			name   string
 			render func() string
@@ -1053,13 +986,11 @@ func TestTerminalColorInheritance(t *testing.T) {
 					t.Errorf("Render method %s should return non-empty string", method.name)
 				}
 
-				// Test that rendered output doesn't contain hardcoded color codes
-				// (This would indicate we're not using terminal-adaptive colors)
 				hardcodedColors := []string{
-					"#1a1b26", // Tokyo Night background
-					"#7aa2f7", // Tokyo Night blue
-					"#9ece6a", // Tokyo Night green
-					"rgb(",    // RGB color functions
+					"#1a1b26",
+					"#7aa2f7",
+					"#9ece6a",
+					"rgb(",
 				}
 
 				for _, hardcoded := range hardcodedColors {
@@ -1072,16 +1003,13 @@ func TestTerminalColorInheritance(t *testing.T) {
 	})
 
 	t.Run("termenv_integration", func(t *testing.T) {
-		// Test that termenv integration works correctly
 
-		// Test that we can create a termenv output
 		termOutput := termenv.NewOutput(os.Stdout)
 		if termOutput == nil {
 			t.Error("Should be able to create termenv output")
 			return
 		}
 
-		// Test color profile detection
 		profile := termOutput.Profile
 		validProfiles := []termenv.Profile{
 			termenv.Ascii,
@@ -1102,22 +1030,18 @@ func TestTerminalColorInheritance(t *testing.T) {
 			t.Errorf("termenv should return a valid color profile, got: %v", profile)
 		}
 
-		// Test dark background detection (should not panic)
 		isDark := termOutput.HasDarkBackground()
-		_ = isDark // We don't assert the value since it depends on the actual terminal
+		_ = isDark
 
-		// Test color conversion
-		color := termOutput.Color("4") // ANSI blue
+		color := termOutput.Color("4")
 		if color == nil {
 			t.Error("termenv should be able to convert ANSI color codes")
 		}
 	})
 }
 
-// TestColorThemeAdaptation tests color adaptation across different themes
 func TestColorThemeAdaptation(t *testing.T) {
 	t.Run("color_theme_scenarios", func(t *testing.T) {
-		// Simulate different terminal theme scenarios
 		scenarios := []struct {
 			name        string
 			colorterm   string
@@ -1133,7 +1057,6 @@ func TestColorThemeAdaptation(t *testing.T) {
 
 		for _, scenario := range scenarios {
 			t.Run(scenario.name, func(t *testing.T) {
-				// Save original environment
 				originalColorterm := os.Getenv("COLORTERM")
 				originalTerm := os.Getenv("TERM")
 				defer func() {
@@ -1141,11 +1064,9 @@ func TestColorThemeAdaptation(t *testing.T) {
 					os.Setenv("TERM", originalTerm)
 				}()
 
-				// Set test environment
 				os.Setenv("COLORTERM", scenario.colorterm)
 				os.Setenv("TERM", scenario.term)
 
-				// Test that our application adapts correctly
 				config := &AppConfig{
 					IsTestMode: true,
 				}
@@ -1155,7 +1076,6 @@ func TestColorThemeAdaptation(t *testing.T) {
 				m.height = 30
 				m.ready = true
 
-				// Test that all views render correctly in this environment
 				views := []string{
 					m.renderDashboard(20),
 					m.renderSettings(20),
@@ -1168,7 +1088,6 @@ func TestColorThemeAdaptation(t *testing.T) {
 					}
 				}
 
-				// Test theme info reflects the environment
 				themeInfo := getTerminalThemeInfo()
 				if !strings.Contains(themeInfo, "Terminal Adaptive") {
 					t.Errorf("Theme info should indicate terminal adaptation in %s", scenario.name)
@@ -1178,9 +1097,7 @@ func TestColorThemeAdaptation(t *testing.T) {
 	})
 
 	t.Run("color_fallback_behavior", func(t *testing.T) {
-		// Test that colors fall back gracefully in limited environments
 
-		// Save original environment
 		originalColorterm := os.Getenv("COLORTERM")
 		originalTerm := os.Getenv("TERM")
 		defer func() {
@@ -1188,27 +1105,23 @@ func TestColorThemeAdaptation(t *testing.T) {
 			os.Setenv("TERM", originalTerm)
 		}()
 
-		// Test with very limited terminal
 		os.Setenv("COLORTERM", "")
 		os.Setenv("TERM", "dumb")
 
-		// Colors should still be defined and usable
 		colors := []lipgloss.Color{
 			colorBlue, colorGreen, colorRed, colorYellow,
 			colorCyan, colorMagenta, colorComment, colorSubtle,
 		}
 
 		for i, color := range colors {
-			if color == "" && i > 1 { // Background colors can be empty (terminal default)
-				// Most colors should have some value
+			if color == "" && i > 1 {
 				colorStr := string(color)
-				if len(colorStr) == 0 && i > 2 { // Allow some colors to be empty for fallback
+				if len(colorStr) == 0 && i > 2 {
 					t.Errorf("Color %d should have fallback value in limited terminal", i)
 				}
 			}
 		}
 
-		// Application should still render
 		config := &AppConfig{
 			IsTestMode: true,
 		}
@@ -1225,12 +1138,10 @@ func TestColorThemeAdaptation(t *testing.T) {
 	})
 }
 
-// TestTerminalThemeInfo tests the terminal theme detection function
 func TestTerminalThemeInfo(t *testing.T) {
 	t.Run("theme_info_format", func(t *testing.T) {
 		info := getTerminalThemeInfo()
 
-		// Should have expected format: "Terminal Adaptive (Profile, Theme)"
 		if !strings.Contains(info, "Terminal Adaptive") {
 			t.Errorf("Theme info should contain 'Terminal Adaptive', got: %s", info)
 		}
@@ -1245,7 +1156,6 @@ func TestTerminalThemeInfo(t *testing.T) {
 	})
 
 	t.Run("theme_info_consistency", func(t *testing.T) {
-		// Call multiple times to ensure consistency
 		info1 := getTerminalThemeInfo()
 		info2 := getTerminalThemeInfo()
 
@@ -1257,7 +1167,6 @@ func TestTerminalThemeInfo(t *testing.T) {
 	t.Run("theme_info_components", func(t *testing.T) {
 		info := getTerminalThemeInfo()
 
-		// Should contain color profile information
 		profiles := []string{"TrueColor", "256 Color", "16 Color", "Basic"}
 		hasProfile := false
 		for _, profile := range profiles {
@@ -1270,7 +1179,6 @@ func TestTerminalThemeInfo(t *testing.T) {
 			t.Errorf("Theme info should contain color profile information, got: %s", info)
 		}
 
-		// Should contain theme type
 		themes := []string{"Dark", "Light"}
 		hasTheme := false
 		for _, theme := range themes {

@@ -7,20 +7,17 @@ import (
 	visualtest "github.com/ryanyogan/omarchy-monitor-settings/pkg/testing"
 )
 
-// TestVisualRegression runs comprehensive visual regression tests for all UI states.
 func TestVisualRegression(t *testing.T) {
 	vt := visualtest.NewVisualTester(t, "testdata/golden")
 
-	// Standard screen sizes to test
 	screenSizes := []struct{ Width, Height int }{
-		{80, 24},  // Minimum size
-		{100, 30}, // Small terminal
-		{120, 40}, // Medium terminal
-		{150, 50}, // Large terminal
-		{200, 60}, // Very large terminal
+		{80, 24},
+		{100, 30},
+		{120, 40},
+		{150, 50},
+		{200, 60},
 	}
 
-	// Test all major UI states across different screen sizes
 	t.Run("Dashboard", func(t *testing.T) {
 		model := createTestModel(ModeDashboard)
 		vt.MultiSizeTest("dashboard", model, screenSizes)
@@ -52,16 +49,14 @@ func TestVisualRegression(t *testing.T) {
 	})
 }
 
-// TestVisualRegressionEdgeCases tests edge cases and boundary conditions.
 func TestVisualRegressionEdgeCases(t *testing.T) {
 	vt := visualtest.NewVisualTester(t, "testdata/golden")
 
 	t.Run("TerminalTooSmall", func(t *testing.T) {
-		// Test terminal sizes below minimum
 		smallSizes := []struct{ Width, Height int }{
-			{70, 20}, // Width too small
-			{80, 15}, // Height too small
-			{60, 10}, // Both too small
+			{70, 20},
+			{80, 15},
+			{60, 10},
 		}
 
 		model := createTestModel(ModeDashboard)
@@ -69,7 +64,6 @@ func TestVisualRegressionEdgeCases(t *testing.T) {
 	})
 
 	t.Run("NoMonitors", func(t *testing.T) {
-		// Test with empty monitor list
 		model := createTestModelWithMonitors(ModeDashboard, []Monitor{})
 		vt.TestVisualRegression(visualtest.VisualTestConfig{
 			Name:   "no_monitors",
@@ -80,7 +74,6 @@ func TestVisualRegressionEdgeCases(t *testing.T) {
 	})
 
 	t.Run("SingleMonitor", func(t *testing.T) {
-		// Test with single monitor
 		monitor := Monitor{
 			Name:        "HDMI-1",
 			Make:        "Samsung",
@@ -102,7 +95,6 @@ func TestVisualRegressionEdgeCases(t *testing.T) {
 	})
 
 	t.Run("ManyMonitors", func(t *testing.T) {
-		// Test with many monitors
 		monitors := make([]Monitor, 5)
 		for i := range monitors {
 			monitors[i] = Monitor{
@@ -113,7 +105,7 @@ func TestVisualRegressionEdgeCases(t *testing.T) {
 				Height:      1080,
 				RefreshRate: 60.0,
 				Scale:       1.0,
-				IsActive:    i == 0, // Only first monitor active
+				IsActive:    i == 0,
 			}
 		}
 
@@ -127,13 +119,11 @@ func TestVisualRegressionEdgeCases(t *testing.T) {
 	})
 }
 
-// TestVisualRegressionInteractions tests UI states with different selections.
 func TestVisualRegressionInteractions(t *testing.T) {
 	vt := visualtest.NewVisualTester(t, "testdata/golden")
 
 	t.Run("NavigationStates", func(t *testing.T) {
-		// Test different navigation menu selections
-		for i := 0; i < 7; i++ { // 0-6 for all menu items
+		for i := 0; i < 7; i++ {
 			model := createTestModel(ModeDashboard)
 			model.selectedOption = i
 
@@ -147,8 +137,7 @@ func TestVisualRegressionInteractions(t *testing.T) {
 	})
 
 	t.Run("ManualScalingControls", func(t *testing.T) {
-		// Test different manual scaling control selections
-		for i := 0; i < 3; i++ { // 0-2 for monitor scale, GTK scale, font DPI
+		for i := 0; i < 3; i++ {
 			model := createTestModel(ModeManualScaling)
 			model.selectedManualControl = i
 
@@ -162,7 +151,6 @@ func TestVisualRegressionInteractions(t *testing.T) {
 	})
 
 	t.Run("ScalingValues", func(t *testing.T) {
-		// Test different scaling values
 		testCases := []struct {
 			name         string
 			monitorScale float64
@@ -191,11 +179,9 @@ func TestVisualRegressionInteractions(t *testing.T) {
 	})
 }
 
-// TestVisualRegressionThemes tests different terminal color themes.
 func TestVisualRegressionThemes(t *testing.T) {
 	vt := visualtest.NewVisualTester(t, "testdata/golden")
 
-	// Test different terminal environments
 	terminalEnvs := []struct {
 		name      string
 		term      string
@@ -209,7 +195,6 @@ func TestVisualRegressionThemes(t *testing.T) {
 
 	for _, env := range terminalEnvs {
 		t.Run(env.name, func(t *testing.T) {
-			// Set environment variables to simulate different terminals
 			t.Setenv("TERM", env.term)
 			if env.colorterm != "" {
 				t.Setenv("COLORTERM", env.colorterm)
@@ -226,7 +211,6 @@ func TestVisualRegressionThemes(t *testing.T) {
 	}
 }
 
-// Helper function to create a test model in a specific mode.
 func createTestModel(mode AppMode) Model {
 	config := &AppConfig{
 		DebugMode:       false,
@@ -244,7 +228,6 @@ func createTestModel(mode AppMode) Model {
 	model.mode = mode
 	model.ready = true
 
-	// Add some test monitors
 	model.monitors = []Monitor{
 		{
 			Name:        "HDMI-A-1",
@@ -271,14 +254,12 @@ func createTestModel(mode AppMode) Model {
 	return model
 }
 
-// Helper function to create a test model with specific monitors.
 func createTestModelWithMonitors(mode AppMode, monitors []Monitor) Model {
 	model := createTestModel(mode)
 	model.monitors = monitors
 	return model
 }
 
-// Mock implementations for testing
 type MockMonitorDetector struct{}
 
 func (m *MockMonitorDetector) DetectMonitors() ([]Monitor, error) {

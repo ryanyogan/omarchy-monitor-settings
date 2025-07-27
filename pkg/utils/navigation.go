@@ -1,34 +1,29 @@
 package utils
 
-// Navigation utilities - PURE LOGIC, NO UI IMPACT
-
-// ClampIndex ensures an index stays within bounds
-func ClampIndex(index, min, max int) int {
-	if index < min {
-		return min
+func ClampIndex(index, minVal, maxVal int) int {
+	if index < minVal {
+		return minVal
 	}
-	if index > max {
-		return max
+	if index > maxVal {
+		return maxVal
 	}
 	return index
 }
 
-// WrapIndex wraps an index around bounds (for circular navigation)
-func WrapIndex(index, min, max int) int {
-	if max < min {
-		return min
+func WrapIndex(index, minVal, maxVal int) int {
+	if maxVal < minVal {
+		return minVal
 	}
 
-	if index < min {
-		return max
+	if index < minVal {
+		return maxVal
 	}
-	if index > max {
-		return min
+	if index > maxVal {
+		return minVal
 	}
 	return index
 }
 
-// NavigateUp decreases index with bounds checking
 func NavigateUp(currentIndex, minIndex int) int {
 	if currentIndex > minIndex {
 		return currentIndex - 1
@@ -36,7 +31,6 @@ func NavigateUp(currentIndex, minIndex int) int {
 	return currentIndex
 }
 
-// NavigateDown increases index with bounds checking
 func NavigateDown(currentIndex, maxIndex int) int {
 	if currentIndex < maxIndex {
 		return currentIndex + 1
@@ -44,15 +38,13 @@ func NavigateDown(currentIndex, maxIndex int) int {
 	return currentIndex
 }
 
-// IsValidIndex checks if an index is within bounds
-func IsValidIndex(index, min, max int) bool {
-	return index >= min && index <= max
+func IsValidIndex(index, minVal, maxVal int) bool {
+	return index >= minVal && index <= maxVal
 }
 
-// GetSafeIndex returns a safe index within bounds, defaulting to min if invalid
-func GetSafeIndex(index, min, max int) int {
-	if IsValidIndex(index, min, max) {
+func GetSafeIndex(index, minVal, maxVal int) int {
+	if IsValidIndex(index, minVal, maxVal) {
 		return index
 	}
-	return min
+	return minVal
 }

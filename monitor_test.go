@@ -5,7 +5,6 @@ import (
 	"testing"
 )
 
-// TestNewMonitorDetector tests the NewMonitorDetector function
 func TestNewMonitorDetector(t *testing.T) {
 	detector := NewMonitorDetector()
 	if detector == nil {
@@ -13,12 +12,10 @@ func TestNewMonitorDetector(t *testing.T) {
 	}
 }
 
-// TestDetectMonitors tests the DetectMonitors function
 func TestDetectMonitors(t *testing.T) {
 	detector := NewMonitorDetector()
 	monitors, err := detector.DetectMonitors()
 
-	// Should always succeed due to fallback
 	if err != nil {
 		t.Errorf("DetectMonitors should not return error, got: %v", err)
 	}
@@ -27,7 +24,6 @@ func TestDetectMonitors(t *testing.T) {
 		t.Error("DetectMonitors should return at least one monitor")
 	}
 
-	// Test monitor properties
 	for i, monitor := range monitors {
 		if monitor.Name == "" {
 			t.Errorf("Monitor %d: Name should not be empty", i)
@@ -47,7 +43,6 @@ func TestDetectMonitors(t *testing.T) {
 	}
 }
 
-// TestGetFallbackMonitors tests the fallback monitor detection
 func TestGetFallbackMonitors(t *testing.T) {
 	detector := NewMonitorDetector()
 	monitors, err := detector.getFallbackMonitors()
@@ -60,7 +55,6 @@ func TestGetFallbackMonitors(t *testing.T) {
 		t.Error("getFallbackMonitors should return at least one monitor")
 	}
 
-	// Test that fallback monitors have reasonable values
 	for i, monitor := range monitors {
 		if monitor.Name == "" {
 			t.Errorf("Fallback monitor %d: Name should not be empty", i)
@@ -80,7 +74,6 @@ func TestGetFallbackMonitors(t *testing.T) {
 	}
 }
 
-// TestParseHyprctlOutput tests hyprctl output parsing with table-driven tests
 func TestParseHyprctlOutput(t *testing.T) {
 	tests := []struct {
 		name           string
@@ -188,14 +181,12 @@ Monitor DP-1 (ID 1):
 				t.Errorf("Expected %d monitors, got %d", tt.expectedCount, len(monitors))
 			}
 
-			// Check monitor names
 			for i, expectedName := range tt.expectedNames {
 				if i < len(monitors) && monitors[i].Name != expectedName {
 					t.Errorf("Monitor %d: Expected name %s, got %s", i, expectedName, monitors[i].Name)
 				}
 			}
 
-			// Check monitor dimensions
 			for i, expectedWidth := range tt.expectedWidth {
 				if i < len(monitors) && monitors[i].Width != expectedWidth {
 					t.Errorf("Monitor %d: Expected width %d, got %d", i, expectedWidth, monitors[i].Width)
@@ -208,7 +199,6 @@ Monitor DP-1 (ID 1):
 				}
 			}
 
-			// Check monitor scales
 			for i, expectedScale := range tt.expectedScale {
 				if i < len(monitors) && monitors[i].Scale != expectedScale {
 					t.Errorf("Monitor %d: Expected scale %f, got %f", i, expectedScale, monitors[i].Scale)
@@ -218,17 +208,13 @@ Monitor DP-1 (ID 1):
 	}
 }
 
-// TestParseWlrRandrOutput tests wlr-randr output parsing
-// This test is disabled due to parsing complexity and edge cases
 func TestParseWlrRandrOutput(t *testing.T) {
 	t.Skip("Skipping wlr-randr parsing test due to complex edge cases")
 }
 
-// TestCommandExists tests the commandExists function
 func TestCommandExists(t *testing.T) {
 	detector := NewMonitorDetector()
 
-	// Test with existing commands
 	existingCommands := []string{"ls", "echo", "cat"}
 	for _, cmd := range existingCommands {
 		if !detector.commandExists(cmd) {
@@ -236,7 +222,6 @@ func TestCommandExists(t *testing.T) {
 		}
 	}
 
-	// Test with non-existing commands
 	nonExistingCommands := []string{"nonexistentcommand12345", "fakecommand98765"}
 	for _, cmd := range nonExistingCommands {
 		if detector.commandExists(cmd) {
@@ -245,20 +230,18 @@ func TestCommandExists(t *testing.T) {
 	}
 }
 
-// TestScalingManager tests the ScalingManager functionality
 func TestScalingManager(t *testing.T) {
 	manager := NewScalingManager()
 	if manager == nil {
 		t.Error("NewScalingManager should not return nil")
 	}
 
-	// Test with different monitor types
 	testMonitors := []Monitor{
-		{Width: 3840, Height: 2160}, // 4K
-		{Width: 2880, Height: 1920}, // High-DPI laptop
-		{Width: 2560, Height: 1440}, // 1440p
-		{Width: 1920, Height: 1080}, // 1080p
-		{Width: 1366, Height: 768},  // Low resolution
+		{Width: 3840, Height: 2160},
+		{Width: 2880, Height: 1920},
+		{Width: 2560, Height: 1440},
+		{Width: 1920, Height: 1080},
+		{Width: 1366, Height: 768},
 	}
 
 	for i, monitor := range testMonitors {
@@ -268,7 +251,6 @@ func TestScalingManager(t *testing.T) {
 			t.Errorf("Monitor %d: Should have scaling options", i)
 		}
 
-		// Test that at least one option is recommended
 		hasRecommended := false
 		for _, option := range options {
 			if option.IsRecommended {
@@ -280,7 +262,6 @@ func TestScalingManager(t *testing.T) {
 			t.Errorf("Monitor %d: Should have at least one recommended option", i)
 		}
 
-		// Test option properties
 		for j, option := range options {
 			if option.MonitorScale <= 0 {
 				t.Errorf("Monitor %d, Option %d: MonitorScale should be positive", i, j)
@@ -304,7 +285,6 @@ func TestScalingManager(t *testing.T) {
 	}
 }
 
-// TestConfigManager tests the ConfigManager functionality
 func TestConfigManager(t *testing.T) {
 	tests := []struct {
 		name      string
@@ -330,7 +310,6 @@ func TestConfigManager(t *testing.T) {
 				t.Error("NewConfigManager should not return nil")
 			}
 
-			// Test with a sample monitor
 			monitor := Monitor{
 				Name:   "test-monitor",
 				Width:  1920,
@@ -338,25 +317,21 @@ func TestConfigManager(t *testing.T) {
 				Scale:  1.0,
 			}
 
-			// Test ApplyMonitorScale
 			err := manager.ApplyMonitorScale(monitor, 1.5)
 			if tt.shouldErr && err == nil {
 				t.Error("Expected error, got nil")
 			}
 
-			// Test ApplyGTKScale
 			err = manager.ApplyGTKScale(2)
 			if tt.shouldErr && err == nil {
 				t.Error("Expected error, got nil")
 			}
 
-			// Test ApplyFontDPI
 			err = manager.ApplyFontDPI(120)
 			if tt.shouldErr && err == nil {
 				t.Error("Expected error, got nil")
 			}
 
-			// Test GetScalingExplanations
 			explanations := manager.GetScalingExplanations()
 			expectedKeys := []string{"monitor", "gtk", "font"}
 			for _, key := range expectedKeys {
@@ -368,7 +343,6 @@ func TestConfigManager(t *testing.T) {
 	}
 }
 
-// TestMonitorEdgeCases tests various edge cases in monitor detection
 func TestMonitorEdgeCases(t *testing.T) {
 	detector := NewMonitorDetector()
 
@@ -383,7 +357,6 @@ func TestMonitorEdgeCases(t *testing.T) {
 			setup: func() {
 				originalPath := os.Getenv("PATH")
 				os.Setenv("PATH", "")
-				// Restore PATH after test
 				defer os.Setenv("PATH", originalPath)
 			},
 			cleanup:     func() {},
@@ -392,7 +365,6 @@ func TestMonitorEdgeCases(t *testing.T) {
 		{
 			name: "invalid command execution",
 			setup: func() {
-				// This would require mocking exec.Command
 			},
 			cleanup:     func() {},
 			shouldPanic: false,
@@ -410,7 +382,6 @@ func TestMonitorEdgeCases(t *testing.T) {
 
 			tt.setup()
 
-			// Test that detection still works (should fall back to demo data)
 			monitors, err := detector.DetectMonitors()
 			if err != nil {
 				t.Errorf("Detection should not fail, got error: %v", err)
@@ -422,11 +393,9 @@ func TestMonitorEdgeCases(t *testing.T) {
 	}
 }
 
-// TestMonitorPropertyBasedScaling tests scaling properties
 func TestMonitorPropertyBasedScaling(t *testing.T) {
 	manager := NewScalingManager()
 
-	// Property: Scaling options should be consistent for same monitor
 	monitor := Monitor{Width: 1920, Height: 1080}
 	options1 := manager.GetIntelligentScalingOptions(monitor)
 	options2 := manager.GetIntelligentScalingOptions(monitor)
@@ -435,7 +404,6 @@ func TestMonitorPropertyBasedScaling(t *testing.T) {
 		t.Error("Same monitor should produce same number of options")
 	}
 
-	// Property: Higher resolution should generally have more scaling options
 	lowResMonitor := Monitor{Width: 800, Height: 600}
 	highResMonitor := Monitor{Width: 3840, Height: 2160}
 
@@ -446,7 +414,6 @@ func TestMonitorPropertyBasedScaling(t *testing.T) {
 		t.Error("Higher resolution should generally have more scaling options")
 	}
 
-	// Property: All scaling values should be positive
 	for _, monitor := range []Monitor{lowResMonitor, highResMonitor} {
 		options := manager.GetIntelligentScalingOptions(monitor)
 		for i, option := range options {
@@ -463,7 +430,6 @@ func TestMonitorPropertyBasedScaling(t *testing.T) {
 	}
 }
 
-// TestTerminalEnvironment tests terminal environment edge cases
 func TestTerminalEnvironment(t *testing.T) {
 	tests := []struct {
 		name       string
@@ -496,19 +462,17 @@ func TestTerminalEnvironment(t *testing.T) {
 		{
 			name:       "empty environment",
 			envVars:    map[string]string{},
-			shouldWork: true, // Should fall back to demo data
+			shouldWork: true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Save original environment
 			originalEnv := make(map[string]string)
 			for key := range tt.envVars {
 				originalEnv[key] = os.Getenv(key)
 			}
 
-			// Restore environment after test
 			defer func() {
 				for key, value := range originalEnv {
 					if value == "" {
@@ -519,12 +483,10 @@ func TestTerminalEnvironment(t *testing.T) {
 				}
 			}()
 
-			// Set test environment
 			for key, value := range tt.envVars {
 				os.Setenv(key, value)
 			}
 
-			// Test detection
 			detector := NewMonitorDetector()
 			monitors, err := detector.DetectMonitors()
 
@@ -536,7 +498,6 @@ func TestTerminalEnvironment(t *testing.T) {
 					t.Error("Expected monitors, got none")
 				}
 			} else {
-				// Should still work due to fallback
 				if len(monitors) == 0 {
 					t.Error("Should have fallback monitors")
 				}
@@ -545,18 +506,14 @@ func TestTerminalEnvironment(t *testing.T) {
 	}
 }
 
-// TestCommandExecution tests command execution edge cases
 func TestCommandExecution(t *testing.T) {
 	detector := NewMonitorDetector()
 
-	// Test with non-existent commands
 	nonExistentCommands := []string{"hyprctl", "wlr-randr"}
 
-	// Save original PATH
 	originalPath := os.Getenv("PATH")
 	defer os.Setenv("PATH", originalPath)
 
-	// Set empty PATH to simulate missing commands
 	os.Setenv("PATH", "")
 
 	for _, cmd := range nonExistentCommands {
@@ -565,7 +522,6 @@ func TestCommandExecution(t *testing.T) {
 		}
 	}
 
-	// Test detection with missing commands (should fall back to demo data)
 	monitors, err := detector.DetectMonitors()
 	if err != nil {
 		t.Errorf("Detection should not fail with missing commands: %v", err)
@@ -575,7 +531,6 @@ func TestCommandExecution(t *testing.T) {
 	}
 }
 
-// BenchmarkDetectMonitors benchmarks monitor detection
 func BenchmarkDetectMonitors(b *testing.B) {
 	detector := NewMonitorDetector()
 
@@ -586,7 +541,6 @@ func BenchmarkDetectMonitors(b *testing.B) {
 	}
 }
 
-// BenchmarkGetFallbackMonitors benchmarks fallback monitor detection
 func BenchmarkGetFallbackMonitors(b *testing.B) {
 	detector := NewMonitorDetector()
 
@@ -597,7 +551,6 @@ func BenchmarkGetFallbackMonitors(b *testing.B) {
 	}
 }
 
-// BenchmarkParseHyprctlOutput benchmarks hyprctl parsing
 func BenchmarkParseHyprctlOutput(b *testing.B) {
 	detector := NewMonitorDetector()
 	input := `Monitor eDP-1 (ID 0):
@@ -619,7 +572,6 @@ Monitor DP-1 (ID 1):
 	}
 }
 
-// BenchmarkScalingOptions benchmarks scaling options generation
 func BenchmarkScalingOptions(b *testing.B) {
 	manager := NewScalingManager()
 	monitor := Monitor{Width: 1920, Height: 1080}
