@@ -7,8 +7,9 @@ import (
 	"os/exec"
 	"regexp"
 	"runtime"
-	"strconv"
 	"strings"
+
+	"github.com/ryanyogan/omarchy-monitor-settings/pkg/utils"
 )
 
 // MonitorDetector handles monitor detection across different platforms and tools
@@ -190,15 +191,15 @@ func (md *MonitorDetector) parseHyprctlOutput(output string) ([]Monitor, error) 
 		}
 
 		// Resolution line: "2880x1920@120.00000 at 0x0" (note: no Hz suffix in newer Hyprland)
-		if strings.Contains(line, "x") && strings.Contains(line, "@") && strings.Contains(line, " at ") {
+		if utils.ContainsAll(line, "x", "@", " at ") {
 			re := regexp.MustCompile(`(\d+)x(\d+)@([\d.]+)\s+at\s+(\d+)x(\d+)`)
 			matches := re.FindStringSubmatch(line)
 			if len(matches) > 5 {
-				currentMonitor.Width, _ = strconv.Atoi(matches[1])
-				currentMonitor.Height, _ = strconv.Atoi(matches[2])
-				currentMonitor.RefreshRate, _ = strconv.ParseFloat(matches[3], 64)
-				currentMonitor.Position.X, _ = strconv.Atoi(matches[4])
-				currentMonitor.Position.Y, _ = strconv.Atoi(matches[5])
+				currentMonitor.Width = utils.ExtractInt(matches[1], 0)
+				currentMonitor.Height = utils.ExtractInt(matches[2], 0)
+				currentMonitor.RefreshRate = utils.ExtractFloat64(matches[3], 60.0)
+				currentMonitor.Position.X = utils.ExtractInt(matches[4], 0)
+				currentMonitor.Position.Y = utils.ExtractInt(matches[5], 0)
 				currentMonitor.IsActive = true
 
 				if debugMode {
@@ -216,7 +217,7 @@ func (md *MonitorDetector) parseHyprctlOutput(output string) ([]Monitor, error) 
 			re := regexp.MustCompile(`scale:\s*([\d.]+)`)
 			matches := re.FindStringSubmatch(line)
 			if len(matches) > 1 {
-				currentMonitor.Scale, _ = strconv.ParseFloat(matches[1], 64)
+				currentMonitor.Scale = utils.ExtractFloat64(matches[1], 1.0)
 				if debugMode {
 					fmt.Printf("DEBUG: Parsed scale: %.2f from line: '%s'\n", currentMonitor.Scale, line)
 				}
@@ -284,13 +285,13 @@ func (md *MonitorDetector) parseWlrRandrOutput(output string) ([]Monitor, error)
 		}
 
 		// Look for resolution and refresh rate
-		if strings.Contains(line, "x") && (strings.Contains(line, "Hz") || strings.Contains(line, "*")) {
+		if utils.ContainsAny(line, "Hz", "*") && strings.Contains(line, "x") {
 			re := regexp.MustCompile(`(\d+)x(\d+).*?([\d.]+)\s*Hz`)
 			matches := re.FindStringSubmatch(line)
 			if len(matches) > 3 {
-				currentMonitor.Width, _ = strconv.Atoi(matches[1])
-				currentMonitor.Height, _ = strconv.Atoi(matches[2])
-				currentMonitor.RefreshRate, _ = strconv.ParseFloat(matches[3], 64)
+				currentMonitor.Width = utils.ExtractInt(matches[1], 0)
+				currentMonitor.Height = utils.ExtractInt(matches[2], 0)
+				currentMonitor.RefreshRate = utils.ExtractFloat64(matches[3], 60.0)
 				currentMonitor.IsActive = strings.Contains(line, "*")
 				currentMonitor.Scale = 1.0 // Default scale
 			}

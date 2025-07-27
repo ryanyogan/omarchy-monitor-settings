@@ -98,32 +98,38 @@ type Position struct {
 }
 
 type Model struct {
-	mode   AppMode
 	width  int
 	height int
-	ready  bool
 
-	services *AppServices
+	mode AppMode
 
-	monitors        []Monitor
-	selectedMonitor int
-	isDemoMode      bool
+	menuItems      []string
+	selectedOption int
 
-	scalingOptions     []ScalingOption
+	monitors           []Monitor
+	selectedMonitor    int
 	selectedScalingOpt int
+	scalingOptions     []ScalingOption
 
 	manualMonitorScale    float64
 	manualGTKScale        int
 	manualFontDPI         int
 	selectedManualControl int
 
-	confirmationAction   ConfirmationAction
-	pendingScalingOption ScalingOption
-	pendingMonitor       Monitor
+	confirmationAction ConfirmationAction
+	pendingOption      ScalingOption
+	pendingMonitor     Monitor
 
-	selectedOption int
-	menuItems      []string
+	isDemoMode bool
+	ready      bool
 
+	services *AppServices
+
+	// Cache expensive operations
+	cachedTerminalTheme string
+	cachedCommandStatus map[string]bool
+
+	// UI styles
 	headerStyle     lipgloss.Style
 	footerStyle     lipgloss.Style
 	titleStyle      lipgloss.Style
@@ -165,9 +171,21 @@ func NewModelWithServices(services *AppServices) Model {
 		manualGTKScale:        1,
 		manualFontDPI:         types.BaseDPI,
 		selectedManualControl: 0,
+
+		// Initialize cache
+		cachedCommandStatus: make(map[string]bool),
 	}
 
 	m.initStyles()
+
+	// Cache expensive operations once at startup
+	m.cachedTerminalTheme = getTerminalThemeInfo()
+
+	// Cache command availability
+	commands := []string{"hyprctl", "wlr-randr"}
+	for _, cmd := range commands {
+		m.cachedCommandStatus[cmd] = utils.CommandExists(cmd)
+	}
 
 	m.loadMonitors()
 
@@ -374,7 +392,7 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			selectedOption := m.scalingOptions[m.selectedScalingOpt]
 			if len(m.monitors) > 0 && m.selectedMonitor < len(m.monitors) {
 				m.confirmationAction = ConfirmSmartScaling
-				m.pendingScalingOption = selectedOption
+				m.pendingOption = selectedOption
 				m.pendingMonitor = m.monitors[m.selectedMonitor]
 				m.mode = ModeConfirmation
 			}
@@ -383,7 +401,7 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			if len(m.monitors) > 0 && m.selectedMonitor < len(m.monitors) {
 				m.confirmationAction = ConfirmManualScaling
 				m.pendingMonitor = m.monitors[m.selectedMonitor]
-				m.pendingScalingOption = ScalingOption{
+				m.pendingOption = ScalingOption{
 					MonitorScale: m.manualMonitorScale,
 					GTKScale:     m.manualGTKScale,
 					FontDPI:      m.manualFontDPI,
@@ -396,7 +414,7 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		} else if m.mode == ModeConfirmation {
 			switch m.confirmationAction {
 			case ConfirmSmartScaling:
-				m.services.ConfigManager.ApplyCompleteScalingOption(m.pendingMonitor, m.pendingScalingOption)
+				m.services.ConfigManager.ApplyCompleteScalingOption(m.pendingMonitor, m.pendingOption)
 			case ConfirmManualScaling:
 				m.services.ConfigManager.ApplyMonitorScale(m.pendingMonitor, m.manualMonitorScale)
 				m.services.ConfigManager.ApplyGTKScale(m.manualGTKScale)
@@ -1151,9 +1169,15 @@ func (m Model) renderSettings(contentHeight int) string {
 	content = append(content, appTitle)
 	content = append(content, "")
 
+	// Use cached terminal theme info or generate it once
+	themeInfo := m.cachedTerminalTheme
+	if themeInfo == "" {
+		themeInfo = getTerminalThemeInfo()
+	}
+
 	appItems := []string{
 		fmt.Sprintf("  Version: %s", lipgloss.NewStyle().Foreground(colorGreen).Render("1.0.0")),
-		fmt.Sprintf("  Theme: %s", lipgloss.NewStyle().Foreground(colorMagenta).Render(getTerminalThemeInfo())),
+		fmt.Sprintf("  Theme: %s", lipgloss.NewStyle().Foreground(colorMagenta).Render(themeInfo)),
 		fmt.Sprintf("  Mode: %s", func() string {
 			if m.isDemoMode {
 				return lipgloss.NewStyle().Foreground(colorYellow).Render("Demo")
@@ -1173,23 +1197,34 @@ func (m Model) renderSettings(contentHeight int) string {
 	content = append(content, detectionTitle)
 	content = append(content, "")
 
-	detector := NewMonitorDetector()
-	methods := []struct {
-		name string
-		cmd  string
-	}{
-		{"Hyprctl", "hyprctl"},
-		{"wlr-randr", "wlr-randr"},
-	}
+	// Use cached command status or check once
+	commands := []string{"hyprctl", "wlr-randr"}
+	names := []string{"Hyprctl", "wlr-randr"}
 
-	for _, method := range methods {
+	for i, cmd := range commands {
 		var status string
-		if detector.commandExists(method.cmd) {
-			status = lipgloss.NewStyle().Foreground(colorGreen).Render("✓ Available")
-		} else {
-			status = lipgloss.NewStyle().Foreground(colorRed).Render("✗ Not found")
+
+		// Use cached status if available
+		if m.cachedCommandStatus != nil {
+			if available, exists := m.cachedCommandStatus[cmd]; exists {
+				if available {
+					status = lipgloss.NewStyle().Foreground(colorGreen).Render("✓ Available")
+				} else {
+					status = lipgloss.NewStyle().Foreground(colorRed).Render("✗ Not found")
+				}
+			}
 		}
-		item := fmt.Sprintf("  %s: %s", method.name, status)
+
+		// Fallback to real check if not cached
+		if status == "" {
+			if utils.CommandExists(cmd) {
+				status = lipgloss.NewStyle().Foreground(colorGreen).Render("✓ Available")
+			} else {
+				status = lipgloss.NewStyle().Foreground(colorRed).Render("✗ Not found")
+			}
+		}
+
+		item := fmt.Sprintf("  %s: %s", names[i], status)
 		content = append(content, lipgloss.NewStyle().Foreground(colorSubtle).Render(item))
 	}
 
@@ -1277,7 +1312,7 @@ func (m Model) renderConfirmation(contentHeight int) string {
 
 	// Show what will be applied
 	monitor := m.pendingMonitor
-	option := m.pendingScalingOption
+	option := m.pendingOption
 
 	// Monitor info
 	monitorTitle := lipgloss.NewStyle().Foreground(colorBlue).Bold(true).Render("📱 Target Monitor")
