@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"os"
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -19,13 +20,6 @@ var (
 )
 
 func main() {
-	if err := Run(); err != nil {
-		log.Fatalf("Error: %v", err)
-	}
-}
-
-// Run is the main entry point for the application
-func Run() error {
 	rootCmd := &cobra.Command{
 		Use:     "omarchy-monitor-settings",
 		Short:   "A stunning TUI for managing monitor resolution and scaling",
@@ -49,7 +43,10 @@ func Run() error {
 	rootCmd.Flags().BoolVar(&debugMode, "debug", false, "Enable debug mode")
 	rootCmd.Flags().BoolVar(&forceLiveMode, "force-live", false, "Force live mode (bypass all checks for testing)")
 
-	return rootCmd.Execute()
+	if err := rootCmd.Execute(); err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		os.Exit(1)
+	}
 }
 
 func runTUI(config *app.Config) error {

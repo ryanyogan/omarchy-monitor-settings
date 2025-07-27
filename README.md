@@ -36,6 +36,8 @@ go install github.com/ryanyogan/omarchy-monitor-settings@latest
 
 # Install a specific version
 go install github.com/ryanyogan/omarchy-monitor-settings@v1.1.2
+
+# The application can now be installed directly from the root module
 ```
 
 ### From Source
