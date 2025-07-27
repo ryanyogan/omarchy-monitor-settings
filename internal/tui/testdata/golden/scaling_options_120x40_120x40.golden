@@ -1,7 +1,7 @@
 # Visual Golden File
 # Name: scaling_options_120x40
 # Dimensions: 120x40
-# Hash: dfa6a305b21c76846fcab4aea5b49875cd353d912434a2a8b759fb4b8d082ac4
+# Hash: 608f425e5028396173c54a8f4818dcab3c5c31da4f8dc693a4f08adf80c8eb87
 
   ╭────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮    
   │                                                                                                                │    
@@ -22,14 +22,19 @@
   │                                                                                                                │    
   │  🎯 Available Options                                                                                          │    
   │                                                                                                                │    
-  │  ▶ Standard (1x) [RECOMMENDED]                                                                                 │    
-  │      Default scaling for sharp text                                                                            │    
+  │  ▶ 1x Native [RECOMMENDED]                                                                                     │    
+  │      Native resolution with standard scaling                                                                   │    
   │      Monitor: 1.0x • GTK: 1x • Font DPI: 96 • Result: 1920x1080                                                │    
   │      💡                                                                                                        │    
   │                                                                                                                │    
-  │    Large (1.25x)                                                                                               │    
-  │      Comfortable scaling for most users                                                                        │    
+  │    1.25x Enhanced                                                                                              │    
+  │      Slightly larger text for better readability                                                               │    
   │      Monitor: 1.2x • GTK: 1x • Font DPI: 120 • Result: 1536x864                                                │    
+  │      💡                                                                                                        │    
+  │                                                                                                                │    
+  │    1.5x Large                                                                                                  │    
+  │      Larger text for accessibility                                                                             │    
+  │      Monitor: 1.5x • GTK: 1x • Font DPI: 144 • Result: 1280x720                                                │    
   │      💡                                                                                                        │    
   │                                                                                                                │    
   │                                                                                                                │    

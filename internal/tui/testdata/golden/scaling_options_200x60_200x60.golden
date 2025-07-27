@@ -1,7 +1,7 @@
 # Visual Golden File
 # Name: scaling_options_200x60
 # Dimensions: 200x60
-# Hash: 095298aa321fbf92f5f9dc896460819fa8d8a832c33cae56b2abfc4a0ddbc8ce
+# Hash: 918afe4e70d96cd5b46aa1094e80c0434ad95f33693c4f0dbe78719d396c83d3
 
   ╭────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮    
   │                                                                                                                                                                                                │    
@@ -22,14 +22,19 @@
   │                                                                                                                                                                                                │    
   │  🎯 Available Options                                                                                                                                                                          │    
   │                                                                                                                                                                                                │    
-  │  ▶ Standard (1x) [RECOMMENDED]                                                                                                                                                                 │    
-  │      Default scaling for sharp text                                                                                                                                                            │    
+  │  ▶ 1x Native [RECOMMENDED]                                                                                                                                                                     │    
+  │      Native resolution with standard scaling                                                                                                                                                   │    
   │      Monitor: 1.0x • GTK: 1x • Font DPI: 96 • Result: 1920x1080                                                                                                                                │    
   │      💡                                                                                                                                                                                        │    
   │                                                                                                                                                                                                │    
-  │    Large (1.25x)                                                                                                                                                                               │    
-  │      Comfortable scaling for most users                                                                                                                                                        │    
+  │    1.25x Enhanced                                                                                                                                                                              │    
+  │      Slightly larger text for better readability                                                                                                                                               │    
   │      Monitor: 1.2x • GTK: 1x • Font DPI: 120 • Result: 1536x864                                                                                                                                │    
+  │      💡                                                                                                                                                                                        │    
+  │                                                                                                                                                                                                │    
+  │    1.5x Large                                                                                                                                                                                  │    
+  │      Larger text for accessibility                                                                                                                                                             │    
+  │      Monitor: 1.5x • GTK: 1x • Font DPI: 144 • Result: 1280x720                                                                                                                                │    
   │      💡                                                                                                                                                                                        │    
   │                                                                                                                                                                                                │    
   │                                                                                                                                                                                                │    
@@ -39,11 +44,6 @@
   │    Font DPI: Fine-grained text scaling (affects most apps)                                                                                                                                     │    
   │                                                                                                                                                                                                │    
   │  ↑↓ select  ⏎ apply  m manual  esc back                                                                                                                                                        │    
-  │                                                                                                                                                                                                │    
-  │                                                                                                                                                                                                │    
-  │                                                                                                                                                                                                │    
-  │                                                                                                                                                                                                │    
-  │                                                                                                                                                                                                │    
   │                                                                                                                                                                                                │    
   │                                                                                                                                                                                                │    
   │                                                                                                                                                                                                │    

@@ -270,14 +270,92 @@ func NewScalingManager() *ScalingManager {
 
 func (sm *ScalingManager) GetIntelligentScalingOptions(monitor Monitor) []ScalingOption {
 	pixelCount := monitor.Width * monitor.Height
+	ppi := sm.calculatePPI(monitor)
 
 	var options []ScalingOption
-
 	baseWidth := monitor.Width
 	baseHeight := monitor.Height
 
-	switch {
-	case pixelCount >= 8294400:
+	// 6K+ displays (6144x3456, 6016x3384, etc.)
+	if pixelCount >= 20000000 {
+		options = []ScalingOption{
+			{
+				MonitorScale:    3.0,
+				GTKScale:        2,
+				FontDPI:         288,
+				FontScale:       1.0,
+				DisplayName:     "3x Ultra Sharp",
+				Description:     "Perfect scaling for 6K+ displays",
+				Reasoning:       "Ideal for 6K displays. Maximum clarity with perfect integer scaling.",
+				IsRecommended:   true,
+				EffectiveWidth:  baseWidth / 3,
+				EffectiveHeight: baseHeight / 3,
+			},
+			{
+				MonitorScale:    2.0,
+				GTKScale:        2,
+				FontDPI:         192,
+				FontScale:       1.0,
+				DisplayName:     "2x High DPI",
+				Description:     "Excellent clarity with more screen space",
+				Reasoning:       "Great for productivity on 6K displays. Sharp text with good real estate.",
+				IsRecommended:   false,
+				EffectiveWidth:  baseWidth / 2,
+				EffectiveHeight: baseHeight / 2,
+			},
+			{
+				MonitorScale:    1.5,
+				GTKScale:        1,
+				FontDPI:         144,
+				FontScale:       1.5,
+				DisplayName:     "1.5x Balanced",
+				Description:     "Maximum screen space with readable text",
+				Reasoning:       "Maximum productivity mode. Good for multi-window workflows.",
+				IsRecommended:   false,
+				EffectiveWidth:  int(float64(baseWidth) / 1.5),
+				EffectiveHeight: int(float64(baseHeight) / 1.5),
+			},
+		}
+	} else if pixelCount >= 14745600 { // 5K displays (5120x2880, 5120x3200, etc.)
+		options = []ScalingOption{
+			{
+				MonitorScale:    2.0,
+				GTKScale:        2,
+				FontDPI:         192,
+				FontScale:       1.0,
+				DisplayName:     "2x Perfect",
+				Description:     "Perfect scaling for 5K displays",
+				Reasoning:       "Ideal for 5K displays. Sharp text with excellent clarity.",
+				IsRecommended:   true,
+				EffectiveWidth:  baseWidth / 2,
+				EffectiveHeight: baseHeight / 2,
+			},
+			{
+				MonitorScale:    1.75,
+				GTKScale:        1,
+				FontDPI:         168,
+				FontScale:       1.75,
+				DisplayName:     "1.75x Enhanced",
+				Description:     "Great balance of clarity and space",
+				Reasoning:       "Excellent for productivity. Good text clarity with more screen real estate.",
+				IsRecommended:   false,
+				EffectiveWidth:  int(float64(baseWidth) / 1.75),
+				EffectiveHeight: int(float64(baseHeight) / 1.75),
+			},
+			{
+				MonitorScale:    1.5,
+				GTKScale:        1,
+				FontDPI:         144,
+				FontScale:       1.5,
+				DisplayName:     "1.5x Productive",
+				Description:     "Maximum screen space for workflows",
+				Reasoning:       "Maximum productivity mode. Ideal for development and design work.",
+				IsRecommended:   false,
+				EffectiveWidth:  int(float64(baseWidth) / 1.5),
+				EffectiveHeight: int(float64(baseHeight) / 1.5),
+			},
+		}
+	} else if pixelCount >= 8294400 { // 4K displays (3840x2160, 4096x2160, etc.)
 		options = []ScalingOption{
 			{
 				MonitorScale:    2.0,
@@ -292,6 +370,18 @@ func (sm *ScalingManager) GetIntelligentScalingOptions(monitor Monitor) []Scalin
 				EffectiveHeight: baseHeight / 2,
 			},
 			{
+				MonitorScale:    1.75,
+				GTKScale:        1,
+				FontDPI:         168,
+				FontScale:       1.75,
+				DisplayName:     "1.75x Enhanced",
+				Description:     "Great balance of clarity and space",
+				Reasoning:       "Excellent for productivity. Good text clarity with more screen real estate.",
+				IsRecommended:   false,
+				EffectiveWidth:  int(float64(baseWidth) / 1.75),
+				EffectiveHeight: int(float64(baseHeight) / 1.75),
+			},
+			{
 				MonitorScale:    1.5,
 				GTKScale:        1,
 				FontDPI:         144,
@@ -304,7 +394,46 @@ func (sm *ScalingManager) GetIntelligentScalingOptions(monitor Monitor) []Scalin
 				EffectiveHeight: int(float64(baseHeight) / 1.5),
 			},
 		}
-	case pixelCount >= 3686400:
+	} else if pixelCount >= 5184000 { // 2.8K displays (2880x1800, 2880x1620, etc.) - Framework 13, MacBook Pro 13"
+		options = []ScalingOption{
+			{
+				MonitorScale:    2.0,
+				GTKScale:        2,
+				FontDPI:         192,
+				FontScale:       1.0,
+				DisplayName:     "2x Ultra Sharp",
+				Description:     "Perfect scaling for 2.8K displays",
+				Reasoning:       "Ideal for 2.8K displays like Framework 13. Maximum clarity with perfect integer scaling.",
+				IsRecommended:   true,
+				EffectiveWidth:  baseWidth / 2,
+				EffectiveHeight: baseHeight / 2,
+			},
+			{
+				MonitorScale:    1.75,
+				GTKScale:        1,
+				FontDPI:         168,
+				FontScale:       1.75,
+				DisplayName:     "1.75x Enhanced",
+				Description:     "Great balance of clarity and space",
+				Reasoning:       "Excellent for productivity. Good text clarity with more screen real estate.",
+				IsRecommended:   false,
+				EffectiveWidth:  int(float64(baseWidth) / 1.75),
+				EffectiveHeight: int(float64(baseHeight) / 1.75),
+			},
+			{
+				MonitorScale:    1.5,
+				GTKScale:        1,
+				FontDPI:         144,
+				FontScale:       1.5,
+				DisplayName:     "1.5x Productive",
+				Description:     "Maximum screen space for workflows",
+				Reasoning:       "Maximum productivity mode. Ideal for development and multi-tasking.",
+				IsRecommended:   false,
+				EffectiveWidth:  int(float64(baseWidth) / 1.5),
+				EffectiveHeight: int(float64(baseHeight) / 1.5),
+			},
+		}
+	} else if pixelCount >= 3686400 { // 2.5K displays (2560x1600, 2560x1440, etc.)
 		options = []ScalingOption{
 			{
 				MonitorScale:    1.5,
@@ -312,8 +441,8 @@ func (sm *ScalingManager) GetIntelligentScalingOptions(monitor Monitor) []Scalin
 				FontDPI:         144,
 				FontScale:       1.5,
 				DisplayName:     "1.5x Sharp",
-				Description:     "Perfect scaling for 1440p displays",
-				Reasoning:       "Ideal for 1440p displays. Provides crisp text and good screen real estate.",
+				Description:     "Perfect scaling for 2.5K displays",
+				Reasoning:       "Ideal for 2.5K displays. Provides crisp text and good screen real estate.",
 				IsRecommended:   true,
 				EffectiveWidth:  int(float64(baseWidth) / 1.5),
 				EffectiveHeight: int(float64(baseHeight) / 1.5),
@@ -330,8 +459,20 @@ func (sm *ScalingManager) GetIntelligentScalingOptions(monitor Monitor) []Scalin
 				EffectiveWidth:  int(float64(baseWidth) / 1.25),
 				EffectiveHeight: int(float64(baseHeight) / 1.25),
 			},
+			{
+				MonitorScale:    1.0,
+				GTKScale:        1,
+				FontDPI:         96,
+				FontScale:       1.0,
+				DisplayName:     "1x Native",
+				Description:     "Native resolution for maximum space",
+				Reasoning:       "Maximum screen real estate. Good for users with excellent vision.",
+				IsRecommended:   false,
+				EffectiveWidth:  baseWidth,
+				EffectiveHeight: baseHeight,
+			},
 		}
-	default:
+	} else if pixelCount >= 2073600 { // 1080p displays (1920x1080, 1920x1200, etc.)
 		options = []ScalingOption{
 			{
 				MonitorScale:    1.0,
@@ -340,7 +481,46 @@ func (sm *ScalingManager) GetIntelligentScalingOptions(monitor Monitor) []Scalin
 				FontScale:       1.0,
 				DisplayName:     "1x Native",
 				Description:     "Native resolution with standard scaling",
-				Reasoning:       "Standard scaling for 1080p and lower displays. Good for most use cases.",
+				Reasoning:       "Standard scaling for 1080p displays. Good for most use cases.",
+				IsRecommended:   true,
+				EffectiveWidth:  baseWidth,
+				EffectiveHeight: baseHeight,
+			},
+			{
+				MonitorScale:    1.25,
+				GTKScale:        1,
+				FontDPI:         120,
+				FontScale:       1.25,
+				DisplayName:     "1.25x Enhanced",
+				Description:     "Slightly larger text for better readability",
+				Reasoning:       "Good for users who prefer larger text without losing too much screen space.",
+				IsRecommended:   false,
+				EffectiveWidth:  int(float64(baseWidth) / 1.25),
+				EffectiveHeight: int(float64(baseHeight) / 1.25),
+			},
+			{
+				MonitorScale:    1.5,
+				GTKScale:        1,
+				FontDPI:         144,
+				FontScale:       1.5,
+				DisplayName:     "1.5x Large",
+				Description:     "Larger text for accessibility",
+				Reasoning:       "Good for accessibility needs or users with vision difficulties.",
+				IsRecommended:   false,
+				EffectiveWidth:  int(float64(baseWidth) / 1.5),
+				EffectiveHeight: int(float64(baseHeight) / 1.5),
+			},
+		}
+	} else { // Lower resolution displays
+		options = []ScalingOption{
+			{
+				MonitorScale:    1.0,
+				GTKScale:        1,
+				FontDPI:         96,
+				FontScale:       1.0,
+				DisplayName:     "1x Native",
+				Description:     "Native resolution with standard scaling",
+				Reasoning:       "Standard scaling for lower resolution displays.",
 				IsRecommended:   true,
 				EffectiveWidth:  baseWidth,
 				EffectiveHeight: baseHeight,
@@ -360,6 +540,17 @@ func (sm *ScalingManager) GetIntelligentScalingOptions(monitor Monitor) []Scalin
 		}
 	}
 
+	// Add PPI-based recommendations for high DPI displays
+	if ppi > 200 {
+		// For very high DPI displays, prioritize integer scaling
+		for i := range options {
+			if options[i].MonitorScale == 2.0 {
+				options[i].IsRecommended = true
+				options[i].Reasoning += " High PPI display benefits from integer scaling."
+			}
+		}
+	}
+
 	return options
 }
 
@@ -371,6 +562,42 @@ func (sm *ScalingManager) GetRecommendedScale(monitor Monitor) float64 {
 		}
 	}
 	return 1.0
+}
+
+// calculatePPI calculates the Pixels Per Inch for a monitor
+// For now, we'll use common screen sizes based on resolution
+// In a real implementation, this would read from EDID or system info
+func (sm *ScalingManager) calculatePPI(monitor Monitor) float64 {
+	// Common screen sizes for different resolutions
+	// These are estimates based on typical laptop and monitor sizes
+	switch {
+	case monitor.Width >= 3840: // 4K+
+		if monitor.Height >= 2160 {
+			// 4K displays: typically 27-32" for desktop, 13-16" for laptops
+			if monitor.Width >= 5120 { // 5K+
+				return 220 // 5K displays are typically high PPI
+			}
+			return 160 // 4K displays
+		}
+	case monitor.Width >= 2880: // 2.8K
+		if monitor.Height >= 1800 {
+			return 220 // Framework 13, MacBook Pro 13" (2880x1800)
+		}
+		return 200 // Other 2.8K displays
+	case monitor.Width >= 2560: // 2.5K
+		if monitor.Height >= 1600 {
+			return 180 // MacBook Pro 15" (2560x1600)
+		}
+		return 140 // 2.5K desktop monitors
+	case monitor.Width >= 1920: // 1080p
+		if monitor.Height >= 1080 {
+			return 120 // Typical 1080p displays
+		}
+	default:
+		return 100 // Lower resolution displays
+	}
+
+	return 120 // Default fallback
 }
 
 type ScalingRecommendation struct {

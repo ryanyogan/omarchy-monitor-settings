@@ -216,11 +216,11 @@ func TestScalingManager(t *testing.T) {
 	}
 
 	testMonitors := []Monitor{
-		{Width: 3840, Height: 2160},
-		{Width: 2880, Height: 1920},
-		{Width: 2560, Height: 1440},
-		{Width: 1920, Height: 1080},
-		{Width: 1366, Height: 768},
+		{Width: 3840, Height: 2160}, // 4K
+		{Width: 2880, Height: 1800}, // 2.8K (Framework 13)
+		{Width: 2560, Height: 1440}, // 2.5K
+		{Width: 1920, Height: 1080}, // 1080p
+		{Width: 1366, Height: 768},  // Lower resolution
 	}
 
 	for i, monitor := range testMonitors {
@@ -406,6 +406,100 @@ func TestMonitorPropertyBasedScaling(t *testing.T) {
 				t.Errorf("Option %d: FontDPI should be positive, got %d", i, option.FontDPI)
 			}
 		}
+	}
+}
+
+func TestFramework13Scaling(t *testing.T) {
+	manager := NewScalingManager()
+
+	// Framework 13 with 2.8K display (2880x1800)
+	framework13 := Monitor{Width: 2880, Height: 1800}
+	options := manager.GetIntelligentScalingOptions(framework13)
+
+	// Should have 3 options for 2.8K displays
+	if len(options) != 3 {
+		t.Errorf("Framework 13 should have 3 scaling options, got %d", len(options))
+	}
+
+	// Check for the recommended 2x option
+	found2x := false
+	for _, option := range options {
+		if option.MonitorScale == 2.0 && option.IsRecommended {
+			found2x = true
+			break
+		}
+	}
+
+	if !found2x {
+		t.Error("Framework 13 should recommend 2x scaling as optimal")
+	}
+
+	// Check PPI calculation
+	ppi := manager.calculatePPI(framework13)
+	if ppi < 200 {
+		t.Errorf("Framework 13 should have high PPI (>200), got %.0f", ppi)
+	}
+}
+
+func TestHighDPIDisplays(t *testing.T) {
+	manager := NewScalingManager()
+
+	testCases := []struct {
+		name            string
+		monitor         Monitor
+		expectedPPI     float64
+		expectedOptions int
+	}{
+		{
+			name:            "5K Display",
+			monitor:         Monitor{Width: 5120, Height: 2880},
+			expectedPPI:     220,
+			expectedOptions: 3,
+		},
+		{
+			name:            "4K Display",
+			monitor:         Monitor{Width: 3840, Height: 2160},
+			expectedPPI:     160,
+			expectedOptions: 3,
+		},
+		{
+			name:            "2.8K Display",
+			monitor:         Monitor{Width: 2880, Height: 1800},
+			expectedPPI:     220,
+			expectedOptions: 3,
+		},
+		{
+			name:            "2.5K Display",
+			monitor:         Monitor{Width: 2560, Height: 1440},
+			expectedPPI:     140,
+			expectedOptions: 3,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			options := manager.GetIntelligentScalingOptions(tc.monitor)
+			if len(options) != tc.expectedOptions {
+				t.Errorf("Expected %d options, got %d", tc.expectedOptions, len(options))
+			}
+
+			ppi := manager.calculatePPI(tc.monitor)
+			if ppi != tc.expectedPPI {
+				t.Errorf("Expected PPI %.0f, got %.0f", tc.expectedPPI, ppi)
+			}
+
+			// Check that at least one option is recommended
+			hasRecommended := false
+			for _, option := range options {
+				if option.IsRecommended {
+					hasRecommended = true
+					break
+				}
+			}
+			if !hasRecommended {
+				t.Error("Should have at least one recommended option")
+			}
+		})
 	}
 }
 

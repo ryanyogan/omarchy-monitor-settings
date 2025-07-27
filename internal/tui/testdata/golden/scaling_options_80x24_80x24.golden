@@ -1,7 +1,7 @@
 # Visual Golden File
 # Name: scaling_options_80x24
 # Dimensions: 80x24
-# Hash: 2758b92ef09491be8828234b117d345ebf3c03166ad32fc24e3230b0bb02120d
+# Hash: efbbfc12cf276080909add13bda23c961e1bf9e03679c5841f3998acff0a8930
 
   ╭────────────────────────────────────────────────────────────────────────╮    
   │                                                                        │    
@@ -22,14 +22,19 @@
   │                                                                        │    
   │  🎯 Available Options                                                  │    
   │                                                                        │    
-  │  ▶ Standard (1x) [RECOMMENDED]                                         │    
-  │      Default scaling for sharp text                                    │    
+  │  ▶ 1x Native [RECOMMENDED]                                             │    
+  │      Native resolution with standard scaling                           │    
   │      Monitor: 1.0x • GTK: 1x • Font DPI: 96 • Result: 1920x1080        │    
   │      💡                                                                │    
   │                                                                        │    
-  │    Large (1.25x)                                                       │    
-  │      Comfortable scaling for most users                                │    
+  │    1.25x Enhanced                                                      │    
+  │      Slightly larger text for better readability                       │    
   │      Monitor: 1.2x • GTK: 1x • Font DPI: 120 • Result: 1536x864        │    
+  │      💡                                                                │    
+  │                                                                        │    
+  │    1.5x Large                                                          │    
+  │      Larger text for accessibility                                     │    
+  │      Monitor: 1.5x • GTK: 1x • Font DPI: 144 • Result: 1280x720        │    
   │      💡                                                                │    
   │                                                                        │    
   │                                                                        │    

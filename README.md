@@ -8,17 +8,19 @@ This tool provides an interactive terminal interface for configuring monitor set
 
 ## Features
 
-- Multi-monitor detection and configuration
-- Intelligent scaling recommendations
-- Real-time configuration updates with dashboard reflection
-- Terminal-adaptive theming
-- Demo mode for testing
-- Comprehensive test coverage (80+ tests)
-- Visual regression testing for UI consistency
-- Git-based versioning system
-- Automated installation and deployment
-- Arch Linux package support
-- Modular Go architecture
+- **Multi-monitor detection and configuration**
+- **Intelligent scaling recommendations** with resolution-specific optimizations
+- **High DPI display support** for 2.8K, 4K, 5K, and 6K displays
+- **Framework 13 optimized** with specialized 2.8K scaling options
+- **Real-time configuration updates** with dashboard reflection
+- **Terminal-adaptive theming**
+- **Demo mode for testing**
+- **Comprehensive test coverage** (80+ tests)
+- **Visual regression testing** for UI consistency
+- **Git-based versioning system**
+- **Automated installation and deployment**
+- **Arch Linux package support**
+- **Modular Go architecture**
 
 ## Requirements
 
@@ -105,6 +107,25 @@ omarchy-monitor-settings --debug
 - `h` or `?` - Help screen
 - `Esc` - Return to previous screen
 - `q` or `Ctrl+C` - Quit
+
+### Smart Scaling Options
+
+The application provides intelligent scaling recommendations based on your monitor's resolution and DPI:
+
+#### High DPI Displays (2.8K, 4K, 5K, 6K)
+- **2x Ultra Sharp**: Perfect integer scaling for maximum clarity
+- **1.75x Enhanced**: Great balance of clarity and screen space
+- **1.5x Productive**: Maximum screen real estate for workflows
+
+#### Framework 13 (2.8K Display)
+- **2x Ultra Sharp**: Recommended for Framework 13 with 2880x1800 display
+- **1.75x Enhanced**: Excellent productivity balance
+- **1.5x Productive**: Maximum workspace for development
+
+#### Standard Displays (1080p, 2.5K)
+- **1x Native**: Standard scaling for most use cases
+- **1.25x Enhanced**: Slightly larger text for better readability
+- **1.5x Large**: Accessibility-friendly larger text
 
 ## Versioning
 

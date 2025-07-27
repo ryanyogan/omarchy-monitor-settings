@@ -253,6 +253,11 @@ func createTestModelForVisual(mode AppMode) Model {
 		},
 	}
 
+	// Update scaling options for the first monitor
+	if len(model.monitors) > 0 {
+		model.scalingOptions = services.ScalingManager.GetIntelligentScalingOptions(model.monitors[0])
+	}
+
 	return model
 }
 
@@ -284,8 +289,8 @@ type MockScalingManager struct{}
 func (m *MockScalingManager) GetIntelligentScalingOptions(mon monitor.Monitor) []monitor.ScalingOption {
 	return []monitor.ScalingOption{
 		{
-			DisplayName:     "Standard (1x)",
-			Description:     "Default scaling for sharp text",
+			DisplayName:     "1x Native",
+			Description:     "Native resolution with standard scaling",
 			MonitorScale:    1.0,
 			GTKScale:        1,
 			FontDPI:         96,
@@ -294,14 +299,24 @@ func (m *MockScalingManager) GetIntelligentScalingOptions(mon monitor.Monitor) [
 			EffectiveHeight: mon.Height,
 		},
 		{
-			DisplayName:     "Large (1.25x)",
-			Description:     "Comfortable scaling for most users",
+			DisplayName:     "1.25x Enhanced",
+			Description:     "Slightly larger text for better readability",
 			MonitorScale:    1.25,
 			GTKScale:        1,
 			FontDPI:         120,
 			IsRecommended:   false,
 			EffectiveWidth:  int(float64(mon.Width) / 1.25),
 			EffectiveHeight: int(float64(mon.Height) / 1.25),
+		},
+		{
+			DisplayName:     "1.5x Large",
+			Description:     "Larger text for accessibility",
+			MonitorScale:    1.5,
+			GTKScale:        1,
+			FontDPI:         144,
+			IsRecommended:   false,
+			EffectiveWidth:  int(float64(mon.Width) / 1.5),
+			EffectiveHeight: int(float64(mon.Height) / 1.5),
 		},
 	}
 }
