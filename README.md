@@ -27,20 +27,20 @@ Monitor detection cascades: `hyprctl` (Hyprland native) → `wlr-randr` (Wayland
 
 ## Why This Matters
 
-This is a supporting tool for the [Omarchy](https://github.com/ryanyogan/omarchy) Linux desktop environment. The problem it solves is specific but real: Wayland compositors handle fractional scaling differently than X11, and the interaction between compositor scale, GTK scale factor, and font DPI creates a combinatorial space that most users navigate by trial and error. The 80+ test suite includes visual regression tests against golden files to ensure the TUI renders correctly across terminal themes.
+This is a supporting tool for the [Omarchy](https://github.com/ryanyogan/omarchy) Linux desktop environment. The problem it solves is specific but real: Wayland compositors handle fractional scaling differently than X11, and the interaction between compositor scale, GTK scale factor, and font DPI creates a combinatorial space that most users navigate by trial and error. The test suite (41 test functions, many with table-driven subtests, plus 9 benchmarks) includes visual regression tests against golden files to ensure the TUI renders correctly across terminal themes.
 
 ## Status
 
-Stable. Published as an Arch Linux package. 16 GitHub stars. Used daily on Framework 13 and multi-monitor desktop setups.
+Stable. Includes a PKGBUILD for building an Arch Linux package locally (not on the AUR). Used daily on Framework 13 and multi-monitor desktop setups.
 
 ## Stack
 
-- **Language:** Go 1.19+
+- **Language:** Go 1.21+
 - **TUI:** Bubbletea + Lipgloss (Charm)
 - **CLI:** Cobra
 - **Terminal detection:** Termenv
 - **Target:** Hyprland/Wayland (wlr-randr fallback)
-- **Testing:** 80+ tests including visual regression
+- **Testing:** 41 test functions plus subtests, including visual regression
 - **Packaging:** Arch Linux PKGBUILD, automated install script
 
 ## Installation
